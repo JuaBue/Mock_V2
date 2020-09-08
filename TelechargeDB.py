@@ -63,4 +63,24 @@ class DataBase:
               Column('Terminal Country Code', String(3), nullable=False),  # Tag 9F1A
               Column('Flags EMV', String(2), nullable=False)   # Ver tabla siguiente ¿?
               )
+        Table('Table_v', self.metadata,
+              Column('AID', String(32), nullable=False),   # identificador de aplicación (Tag 4F). Hasta 32.
+              Column('Separador', String(1), nullable=False),   # "/#" (Hex. 23).
+              Column('Application Version Number', String(4), nullable=False),   # Versión de AID (Tag 9F09).
+              Column('TAC Denial', String(10), nullable=False),   # Código de acción del terminal para denegación.
+              Column('TAC On-line', String(10), nullable=False),   # Código de acción del terminal para transacción
+              # on-line
+              Column('TAC Default', String(10), nullable=False),   # Codigo de acción del terminal por defecto.
+              Column('Default TDOL', String(60), nullable=False),   # TDOL usado si la tarjeta no lo tiene.
+              Column('Separador', String(1), nullable=False),   # "/#" (Hex. 23)
+              Column('Default DDOL', String(60), nullable=False),   # DDOL usado si la tarjeta no lo tiene.
+              Column('Separador', String(1), nullable=False),   # "/#" (Hex. 23)
+              Column('Transaction Currency Code', String(3), nullable=False),   # Codigo de moneda (Tag 5F2A).
+              Column('Terminal Floor Limit', String(4), nullable=False),   # Tag 9F1B
+              Column('Target Percent', String(2), nullable=False),   # Para gestión de riesgos del terminal.
+              Column('Threshold Value', String(4), nullable=False),   # Para gestión de riesgos del terminal.
+              Column('Maximum Target', String(2), nullable=False),   # Para gestión de riesgos del terminal.
+              Column('Etiqueta privada', String(32), nullable=False)    # Etiqueta por defecto a usar cuando el T9F12
+              # o T50 no están.
+              )
         self.metadata.create_all(self.engine)
