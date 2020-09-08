@@ -111,4 +111,14 @@ class DataBase:
               # RID+INDEX+MODULO+EXP)
               Column('Expire Date', String(6), nullable=False)   # MMDDYY
               )
+        # TABLA W: TABLA BIN/MENUS
+        Table('Table_W', self.metadata,
+              Column('Bin', String(6), nullable=False),   # Numero de Bin
+              Column('Cod. Servicio/Operativa', String(3), nullable=False),  # Código de Servicio obtenido de la
+              # pista o Operativa obtenido de la Tabla F.
+              Column('Cod. Menú', String(3), nullable=False),  # Código del Menú.
+              Column('Tipo Menú', String(1), nullable=False),  # Tipo de Menú. Se explica mas abajo.
+              Column('Num. Productos.', String(2), nullable=False),  # Numero de productos máximos por transacción.
+              Column('Accion', String(1), nullable=False)   # Alta, Baja o Modificación
+              )
         self.metadata.create_all(self.engine)
