@@ -99,4 +99,16 @@ class DataBase:
               Column('KCV', String(6), nullable=False)   # Código de validación de la clave real (no del valor
               # encriptado que se envía en la trama de telecarga) enviados en formato hexadecimal.
               )
+        # TABLA e: TABLA DE CLAVES PUBLICAS
+        Table('Table_e', self.metadata,
+              Column('RID', String(10), nullable=False),   # identificador de proveedor (Visa, Mastercard, Maestro...)
+              Column('Index', String(2), nullable=False),  # Indice de la clave en hexadecimal desdoblado
+              Column('Modulus Length', String(2), nullable=False),  # En hexadecimal desdoblado
+              Column('Modulus', String(496), nullable=False),  # Módulo de la clave desdoblado.
+              Column('Exponent', String(5), nullable=False),  # Puede valer “00002” ó “00003” ó “10001”
+              # (65.537).
+              Column('Hash SHA1', String(40), nullable=False),  # Verificación de la clave Sha1(
+              # RID+INDEX+MODULO+EXP)
+              Column('Expire Date', String(6), nullable=False)   # MMDDYY
+              )
         self.metadata.create_all(self.engine)
