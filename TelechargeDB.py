@@ -11,7 +11,7 @@ class DataBase:
         self.engine = create_engine(engine_name, echo=True)
         self.metadata = MetaData(bind=None)
         # TABLA E: TABLA DE DATOS DE ESTACIÓN
-        Table('Table_E', self.metadata,
+        Table('Table_EE', self.metadata,
               Column('EESS', String(7), nullable=False),   # Número de estación H24.
               Column('CIF', String(10), nullable=False),   # CIF de la estación de servicio
               Column('NOMB', String(24), nullable=False),  # Nombre de la estación de servicio
@@ -33,7 +33,7 @@ class DataBase:
               Column('VALOR', String(50), nullable=False)  # Valor del parámetro
               )
         # TABLA F: TABLA DE BINES
-        Table('Table_F', self.metadata,
+        Table('Table_FF', self.metadata,
               Column('Bin', String(6), nullable=False),   # Numero de Bin
               Column('Operativa', String(1), nullable=False),   # Operativa para el despliegue del menu
               Column('Datos Adicionales', String(1), nullable=False),  # Control sobre las pistas para la petición
@@ -91,7 +91,7 @@ class DataBase:
               )
         # TABLA Z: Identifica la clave de forma univoca. Este dato se envía en el PIN-BLOCK de la trama Pufdi (‘/G’),
         # para saber la clave que ha usado el terminal en la encriptación
-        Table('Table_Z', self.metadata,
+        Table('Table_ZZ', self.metadata,
               Column('Id. Clave', String(1), nullable=False),   # Identifica la clave de forma univoca. Este dato se
               # envía en el PIN-BLOCK de la trama Pufdi (‘/G’), para saber la clave que ha usado el terminal en la
               # encriptación
@@ -112,7 +112,7 @@ class DataBase:
               Column('Expire Date', String(6), nullable=False)   # MMDDYY
               )
         # TABLA W: TABLA BIN/MENUS
-        Table('Table_W', self.metadata,
+        Table('Table_WW', self.metadata,
               Column('Bin', String(6), nullable=False),   # Numero de Bin
               Column('Cod. Servicio/Operativa', String(3), nullable=False),  # Código de Servicio obtenido de la
               # pista o Operativa obtenido de la Tabla F.
@@ -122,9 +122,29 @@ class DataBase:
               Column('Accion', String(1), nullable=False)   # Alta, Baja o Modificación
               )
         # TABLA M: TABLA DE MENUS PRODUCTOS
-        Table('Table_M', self.metadata,
+        Table('Table_MM', self.metadata,
               Column('Cod. Menú', String(3), nullable=False),   # Código del Menú obtenido en la tabla W
               Column('Cod. Producto', String(3), nullable=False),  # Código del producto para acceder a la tabla V.
               Column('Accion', String(1), nullable=False)   # Alta, Baja o Modificación
+              )
+        # TABLA V: TABLA DE PRODUCTOS
+        Table('Table_VV', self.metadata,
+              Column('Cod. Producto', String(3), nullable=False),   # Código de Producto
+              Column('Cod. Producto AS400', String(2), nullable=False),  # Código Producto del AS400
+              Column('Descripción', String(16), nullable=False),  # Descripción del producto para el Menú y tickets
+              Column('Combustible', String(1), nullable=False),  # Indica si es un combustible o no para la solicitud
+              # del precio unitario.
+              Column('Cod. Producto Polling', String(3), nullable=False)   # Código Producto Polling.
+              )
+        # TABLA t: TABLA MENU TIPO PRODUCTO DE RECARGAS
+        Table('Table_t', self.metadata,
+              Column('TPR_ID', String(2), nullable=False),   # Tipo Recarga
+              Column('Descripción', String(16), nullable=False)   # Descripción de la Recarga para el Menú
+              )
+        # TABLA c: TABLA MENU COMPAÑIAS OPERADORAS DE RECARGA
+        Table('Table_c', self.metadata,
+              Column('TPR_ID', String(2), nullable=False),   # Tipo Recarga
+              Column('MCRO_ID_400', String(10), nullable=False),  # Código de Compañía/operadora
+              Column('Descripción', String(16), nullable=False)   # Descripción de la Compañía/operadora para el Menú
               )
         self.metadata.create_all(self.engine)
