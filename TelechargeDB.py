@@ -121,4 +121,10 @@ class DataBase:
               Column('Num. Productos.', String(2), nullable=False),  # Numero de productos máximos por transacción.
               Column('Accion', String(1), nullable=False)   # Alta, Baja o Modificación
               )
+        # TABLA M: TABLA DE MENUS PRODUCTOS
+        Table('Table_M', self.metadata,
+              Column('Cod. Menú', String(3), nullable=False),   # Código del Menú obtenido en la tabla W
+              Column('Cod. Producto', String(3), nullable=False),  # Código del producto para acceder a la tabla V.
+              Column('Accion', String(1), nullable=False)   # Alta, Baja o Modificación
+              )
         self.metadata.create_all(self.engine)
