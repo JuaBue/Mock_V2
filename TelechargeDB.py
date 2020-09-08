@@ -54,4 +54,13 @@ class DataBase:
               Column('BIN', String(6), nullable=False)   # BIN sobre el cual se tiene que hacer el control del código
               # de servicio.
               )
+        Table('Table_m', self.metadata,
+              Column('Terminal Type', String(2), nullable=False),   # Tag 9F35: según ICS
+              Column('Terminal Capabilities', String(6), nullable=False),  # Tag 9F33: según ICS
+              Column('Additional Terminal Capabilities', String(10), nullable=False),  # Tag 9F40 según ICS
+              Column('Transaction Category Code', String(2), nullable=False),  # Tag 9F53
+              Column('Merchant Category Code', String(4), nullable=False),  # Tag 9F15
+              Column('Terminal Country Code', String(3), nullable=False),  # Tag 9F1A
+              Column('Flags EMV', String(2), nullable=False)   # Ver tabla siguiente ¿?
+              )
         self.metadata.create_all(self.engine)
