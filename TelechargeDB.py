@@ -49,4 +49,9 @@ class DataBase:
               Column('Longitud', String(2), nullable=False),  # Longitud del PAN para su validación.
               Column('Acción', String(1), nullable=False)  # Alta, Baja o Modificación.
               )
+        Table('Table_x', self.metadata,
+              Column('Lognitud BIN', String(1), nullable=False),   # Longitud del BIN
+              Column('BIN', String(6), nullable=False)   # BIN sobre el cual se tiene que hacer el control del código
+              # de servicio.
+              )
         self.metadata.create_all(self.engine)
