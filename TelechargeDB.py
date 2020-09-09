@@ -181,4 +181,29 @@ class DataBase:
               Column('Literal', String(16), nullable=False),  # Literal que se mostrara en pantalla
               Column('Mascara', String(30), nullable=False)   # Mascara a aplicar para cada uno de los tipos adicionales
               )
+        # TABLA f: TABLA DE CONTROL ESPECIAL_NEMOS
+        Table('Table_f', self.metadata,
+              Column('Bin', String(6), nullable=False),   # Numero de Bin. De la Tabla TV_F.
+              Column('Nemo', String(10), nullable=False)   # Código del Dato adicional
+              )
+        # TABLA N: TABLA DE PREMIOS
+        Table('Table_NN', self.metadata,
+              Column('Tipo Fidelidad', String(1), nullable=False),   # Letra de Premio de la Tabla TV_F
+              Column('Código', String(5), nullable=False),  # Código del Regalo
+              Column('Descripción', String(12), nullable=False),  # Descripción del Regalo
+              Column('Puntos', String(5), nullable=False),  # Puntos del Regalo
+              Column('Tipo Regalo', String(1), nullable=False),  # Detalle en la Tabla. Se usa Para el Ticket, si se
+              # tiene que sacar o no, etc.
+              Column('Acción', String(1), nullable=False)   #
+              )
+        # TABLA R: TABLA COMISIONES
+        Table('Table_RR', self.metadata,
+              Column('CLA_ID', String(3), nullable=False),   # Clase tarjeta
+              Column('Descripción', String(16), nullable=False)   # Descripción a mostrar en pantalla.
+              )
+        # TABLA B: TABLA BINES PREPAGO
+        Table('Table_BB', self.metadata,
+              Column('BIN Venta', String(6), nullable=False),   # Valor del BIN de la operación de Venta
+              Column('BIN', String(10), nullable=False)   # Valor del BIN de Prepago.
+              )
         self.metadata.create_all(self.engine)
