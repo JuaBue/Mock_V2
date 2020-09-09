@@ -147,8 +147,8 @@ class DataBase:
               Column('MCRO_ID_400', String(10), nullable=False),  # Código de Compañía/operadora
               Column('Descripción', String(16), nullable=False)   # Descripción de la Compañía/operadora para el Menú
               )
-        # TABLA c: TABLA PRODUCTOS DE RECARGAS
-        Table('Table_c', self.metadata,
+        # TABLA p: TABLA PRODUCTOS DE RECARGAS
+        Table('Table_p', self.metadata,
               Column('MCRO_ID_400', String(10), nullable=False),   # Código de Compañía/operadora
               Column('Prod_id_400', String(10), nullable=False),   # Código de Producto
               Column('Descripción', String(16), nullable=False),  # Descripción de la Compañía/operadora para el Menú
@@ -167,5 +167,18 @@ class DataBase:
               # Usado en terminales que no reciben el ticketc entero)
               Column('Des. Prod. Impresora', String(24), nullable=False)   # Descripcion del producto para imprimir
               # en el ticket (Usado en terminales que no reciben el ticketc entero)
+              )
+        # TABLA d: TABLA DE PRODUCTOS/DATOS ADICIONALES
+        Table('Table_d', self.metadata,
+              Column('CDA_ID', String(2), nullable=False),   # Código de Operacion
+              Column('ID_DATO', String(16), nullable=False)   # Código del Dato adicional
+              )
+        # TABLA a: TABLA MENU COMPAÑIAS OPERADORAS DE RECARGA
+        Table('Table_a', self.metadata,
+              Column('ID_DATO', String(2), nullable=False),   # Código del dato adicional recuperado de la tabla d.
+              Column('Tipo_Dato', String(1), nullable=False),  # Si es por teclado o lector
+              Column('Tag_Asociado', String(2), nullable=False),  # Tag que se enviara en la trama de solicitud
+              Column('Literal', String(16), nullable=False),  # Literal que se mostrara en pantalla
+              Column('Mascara', String(30), nullable=False)   # Mascara a aplicar para cada uno de los tipos adicionales
               )
         self.metadata.create_all(self.engine)
