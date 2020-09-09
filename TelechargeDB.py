@@ -147,4 +147,25 @@ class DataBase:
               Column('MCRO_ID_400', String(10), nullable=False),  # Código de Compañía/operadora
               Column('Descripción', String(16), nullable=False)   # Descripción de la Compañía/operadora para el Menú
               )
+        # TABLA c: TABLA PRODUCTOS DE RECARGAS
+        Table('Table_c', self.metadata,
+              Column('MCRO_ID_400', String(10), nullable=False),   # Código de Compañía/operadora
+              Column('Prod_id_400', String(10), nullable=False),   # Código de Producto
+              Column('Descripción', String(16), nullable=False),  # Descripción de la Compañía/operadora para el Menú
+              Column('CDA', String(2), nullable=False),  # Conjunto de datos adicionales.
+              Column('IMP. MAX', String(5), nullable=False),  # Importe Máximo
+              Column('IMP. MIN', String(5), nullable=False),  # Importe Mínimo
+              Column('Multi.', String(4), nullable=False),  # Multiplo
+              Column('Tipo Oper.', String(3), nullable=False),  # Tipo Operación para recargas
+              Column('Tip. Op. An.', String(3), nullable=False),  # Tipo operación para anulaciones
+              Column('CDDA', String(2), nullable=False),  # Conjunto de datos adicionales anulación
+              Column('Umbral Min', String(2), nullable=False),  # Umbral mínimo para stock cupones (NO SE USA
+              # ACTUALMENTE)
+              Column('Mensaje Cabec.', String(48), nullable=False),  # Mensaje para la cabecera del Ticket de la
+              # Recarga (Usado en terminales que no reciben el ticketc entero)
+              Column('Mensaje Pie', String(72), nullable=False),  # Mensaje para el pie del Ticket de la Recarga (
+              # Usado en terminales que no reciben el ticketc entero)
+              Column('Des. Prod. Impresora', String(24), nullable=False)   # Descripcion del producto para imprimir
+              # en el ticket (Usado en terminales que no reciben el ticketc entero)
+              )
         self.metadata.create_all(self.engine)
