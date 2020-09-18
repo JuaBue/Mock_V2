@@ -1,3 +1,6 @@
 import TelechargeDB
 
-TelechargeDB.DataBase()
+Data = TelechargeDB.DataBase()
+Data.LoadFile("tablas.txt")
+
+

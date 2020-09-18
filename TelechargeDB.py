@@ -206,4 +206,88 @@ class DataBase:
               Column('BIN Venta', String(6), nullable=False),   # Valor del BIN de la operación de Venta
               Column('BIN', String(10), nullable=False)   # Valor del BIN de Prepago.
               )
+        # TABLA n: TABLA DE APLICACIONES SIN CONTACTOS
+        Table('Table_n', self.metadata,
+              Column('AID', String(32), nullable=False),   # identificador de aplicación (Tag 4F). Hasta 32.
+              Column('Application Version Number', String(4), nullable=False),   # Versión de AID (Tag 9F09).
+              Column('Application Version PayPass Number', String(4), nullable=False),  # Application Version Number
+              # PayPass – Mag Stripe (tag "9F6D")
+              Column('TAC Denial', String(10), nullable=False),   # Código de acción del terminal para denegación.
+              Column('TAC On-line', String(10), nullable=False),   # Código de acción del terminal para transacción
+              # on-line
+              Column('TAC Default', String(10), nullable=False),   # Codigo de acción del terminal por defecto.
+              Column('Default TDOL', String(60), nullable=False),   # TDOL usado si la tarjeta no lo tiene.
+              Column('Default DDOL', String(60), nullable=False),   # DDOL usado si la tarjeta no lo tiene.
+              Column('Default UDOL', String(60), nullable=False),  # UDOL usado si la tarjeta no lo tiene.
+              Column('TCC', String(3), nullable=False),  # Codigo de moneda (Tag 5F2A).
+              Column('Terminal Floor Limit', String(6), nullable=False),   # Tag 9F1B
+              Column('Target Percent', String(2), nullable=False),   # Para gestión de riesgos del terminal.
+              Column('Threshold Value', String(4), nullable=False),   # Para gestión de riesgos del terminal.
+              Column('Maximum Target', String(2), nullable=False),   # Para gestión de riesgos del terminal.
+              Column('Etiqueta privada', String(40), nullable=False),   # Etiqueta por defecto a usar cuando el T9F12
+
+              Column('AFF', String(1), nullable=False),  # Allowed Form Factors
+              Column('Cless Floor Limit', String(1), nullable=False),  # Reader Contactless Floor Limit
+
+
+              Column('Etiqueta privada', String(40), nullable=False)  # Etiqueta por defecto a usar cuando el T9F12
+              # o T50 no están.
+              )
+        # TABLA I: TABLA BINES INCOMPATIBLES
+        Table('Table_II', self.metadata,
+              Column('BIN 1', String(6), nullable=False),   # Valor del BIN 1 (numérico o “X”)
+              Column('BIN 2', String(6), nullable=False)   # Valor del BIN 2 (numérico o “X”)
+              )
+        # TABLA i: TABLA BINES MULTI-APP
+        Table('Table_i', self.metadata,
+              Column('BIN', String(9), nullable=False),   # BIN que debe ser procesado por H24 (capturar evento de
+              # tarjeta para su procesado si coincide BIN y longitud de PAN)
+              Column('Longitud del PAN', String(2), nullable=False)   # Longitud del PAN a coincidir junto con el BIN
+              # para que H24 procese la tarjeta
+              )
+        # TABLA g: TABLA DE GRUPOS DE RECONCILIACION
+        Table('Table_g', self.metadata,
+              Column('AUT_ID', String(15), nullable=False),   # Identificador unívoco del autorizador.
+              Column('AUT_NEMO', String(24), nullable=False),  # Etiqueta asociada al autorizador
+              Column('AUT_ROUTE', String(10), nullable=False)   # Identificador de enrutamiento.
+              )
+        # TABLA b: TABLA DE CAPACIDADES OFFLINE
+        Table('Table_b', self.metadata,
+              Column('Bin', String(19), nullable=False),   # Numero de Bin
+              Column('Importe máximo offline', String(10), nullable=False),  # Maximo importe permitido en operativa
+              # offline.
+              Column('Acción', String(1), nullable=False)   # Alta, Baja ó Modificación
+              )
+        # TABLA j: TABLA DE TOKETIZACIÓN DE TARJETAS NO ESTANDARD - TARJETIZACIÓN
+        Table('Table_j', self.metadata,
+              Column('Format', String(3), nullable=False),   # Record format identifier
+              Column('Entry method', String(8), nullable=False),  # String of entry methods affected by the rule
+              # described in a record.
+              Column('Index', String(2), nullable=False),  # Defines the order of evaluation of tokenization rules
+              # when there are more than one rule affecting an entry method.
+              Column('Detection rule', String(256), nullable=False),  # Standard regular expression (regex) used to
+              # determine if the data supplied as payment method is affected by current rule.
+              Column('Action', String(8), nullable=False),  # Action to be performed for non-standard payment data
+              # matching current rule.
+              Column('Extraction rule', String(128), nullable=False),  # Standard scanf-compliant expression used to
+              # collect information from the non-standard payment data received.
+              Column('Generation list', String(128), nullable=False)   # This field includes a list of
+              # standard-payment data built using the information collected using the extraction rule above.
+              )
         self.metadata.create_all(self.engine)
+
+    def LoadFile(self, pathfile):
+          file = open(pathfile, 'r')
+          tableline = file.readline()
+          print(tableline)
+          self.__ParseTable(tableline)
+          print(file.readline())
+
+    def __ParseTable(self, tableline):
+          print(self.__GetHeader(tableline))
+          pass
+
+    def __GetHeader(self, tableline):
+          header = tableline[1:31]
+          return header
+
