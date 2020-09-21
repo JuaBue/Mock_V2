@@ -103,7 +103,7 @@ class DataBase:
               )
         # TABLA Z: Identifica la clave de forma univoca. Este dato se envía en el PIN-BLOCK de la trama Pufdi (‘/G’),
         # para saber la clave que ha usado el terminal en la encriptación
-        Table('Table_ZZ', self.metadata,
+        self.tableZZ = Table('Table_ZZ', self.metadata,
               Column('Id. Clave', String(1), nullable=False),  # Identifica la clave de forma univoca. Este dato se
               # envía en el PIN-BLOCK de la trama Pufdi (‘/G’), para saber la clave que ha usado el terminal en la
               # encriptación
@@ -334,6 +334,9 @@ class DataBase:
                 return status, data
         if data[0] == "Z":
             tableversion = data[1:4]
+            status, data = self.__Table_ZZ(data[4:])
+            if not status:
+                return status, data
         if data[0] == "F":
             tableversion = data[2:5]
         if data[0] == "W":
@@ -394,8 +397,35 @@ class DataBase:
         table_column_names = self.tableEE.columns.keys()
         for index in range(len(table_column_names)):
             table_json[table_column_names[index]] = field_list[index]
-
         connection.execute(self.tableEE.insert(), table_json)
+        self.disconnectEngine(connection)
+        error_msg = "Table E parsed OK"
+        self.logging.info(error_msg)
+        return True, error_msg
+
+    def __Table_ZZ(self, table_record):
+        if table_record[0] != "#":
+            error_msg = "Error in Frame {0}".format(table_record[0])
+            self.logging.error(error_msg)
+            return False, error_msg
+        connection = self.connectEngine()
+        # Remove last chars of string (DC2 and EM)
+        table_record = table_record[1:-2]
+        # Split the record by DC1
+        field_list = table_record.split('\x11')
+        print(field_list)
+        # Build the JSON to insert the data into DB
+        table_list = []
+        for field in field_list:
+            table_json = {}
+            if not field:
+                break
+            clave = [field[0], field[1:33], field[33:]]
+            table_column_names = self.tableZZ.columns.keys()
+            for index in range(len(table_column_names)):
+                table_json[table_column_names[index]] = clave[index]
+            table_list.append(table_json)
+        connection.execute(self.tableZZ.insert(), table_list)
         self.disconnectEngine(connection)
         error_msg = "Table E parsed OK"
         self.logging.info(error_msg)
