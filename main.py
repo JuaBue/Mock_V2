@@ -12,10 +12,9 @@ class MockV2:
     logger_handler = None
     socket_handler = None
 
-    @staticmethod
-    def load_tables():
-        data = TelechargeDB.DataBase()
-        data.LoadFile("tablas.txt")
+    def load_tables(self):
+        data = TelechargeDB.DataBase(self.logger_handler)
+        data.loadfile("tablas.txt")
 
     def __init__(self):
         self.init_logging()
@@ -59,6 +58,7 @@ class MockV2:
             self.socket_handler.close()
             exit(ERROR_SOCKET_CONFIGURATION)
         self.socket_handler.server_start()
+        print(self.socket_handler.get_ip())
         self.logger_handler.info("Server listening...")
         while True:
             current_connection, address = self.socket_handler.accept_socket()
@@ -86,5 +86,6 @@ if __name__ == "__main__":
         mock = MockV2()
         mock.load_tables()
         mock.run()
+
     except KeyboardInterrupt:
         pass

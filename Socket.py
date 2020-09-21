@@ -36,6 +36,10 @@ class SocketHandler:
             self.restart()
         self.ip_address = ip_address
 
+    def get_ip(self):
+        # Get ip address used by the socket.
+        return socket.gethostbyname(socket.gethostname())
+
     def set_port(self, port=504):
         if self.port != port:
             # Restart socket if port has changed
