@@ -6,27 +6,38 @@ from sqlalchemy.orm import relationship
 
 class DataBase:
 
-    def __init__(self, logging_handler):
+    def __init__(self, logging_handler, drop_database=True):
         self.logging = logging_handler
-        engine_name = 'sqlite:///telecharge.db'
-        self.engine = create_engine(engine_name, echo=True)
+        self.engine = None
+        self.metadata = None
+        self.tableEE = None
+        self.engine_name = 'sqlite:///telecharge.db'
+
+        self.init_engine()
+        if drop_database:
+            self.dropdb()
+            self.init_engine()
+
+    def init_engine(self):
+        self.engine = create_engine(self.engine_name, echo=True)
         self.metadata = MetaData(bind=None)
+
         # TABLA E: TABLA DE DATOS DE ESTACIÓN
         self.tableEE = Table('Table_EE', self.metadata,
-              Column('EESS', String(7), nullable=False),  # Número de estación H24.
-              Column('CIF', String(10), nullable=False),  # CIF de la estación de servicio
-              Column('NOMB', String(24), nullable=False),  # Nombre de la estación de servicio
-              Column('Provincia', String(14), nullable=False),  # Provincia
-              Column('DLG', String(2), nullable=False),  # Delegación del TPV
-              Column('HH', String(4), nullable=False),  # Hora Comunicación
-              Column('CIE', String(1), nullable=False),  # Tiene Cierre 4B (Valores 0, 1)
-              Column('CEN', String(1), nullable=False),  # Tiene centralita (Valores 0, 1)
-              Column('PASS', String(5), nullable=False),  # Password de Mantenimiento
-              Column('CHQO', String(2), nullable=False),  # Cheques off/cupones sin comunicar
-              Column('CHQA', String(1), nullable=False),  # Tipos de cheques activos
-              Column('LANG', String(2), nullable=False),  # Idioma del TPV
-              Column('CURR', String(3), nullable=False)  # Divisa del TPV
-              )
+                             Column('EESS', String(7), nullable=False),  # Número de estación H24.
+                             Column('CIF', String(10), nullable=False),  # CIF de la estación de servicio
+                             Column('NOMB', String(24), nullable=False),  # Nombre de la estación de servicio
+                             Column('Provincia', String(14), nullable=False),  # Provincia
+                             Column('DLG', String(2), nullable=False),  # Delegación del TPV
+                             Column('HH', String(4), nullable=False),  # Hora Comunicación
+                             Column('CIE', String(1), nullable=False),  # Tiene Cierre 4B (Valores 0, 1)
+                             Column('CEN', String(1), nullable=False),  # Tiene centralita (Valores 0, 1)
+                             Column('PASS', String(5), nullable=False),  # Password de antenimiento
+                             Column('CHQO', String(2), nullable=False),  # Cheques off/cupones sin comunicar
+                             Column('CHQA', String(1), nullable=False),  # Tipos de cheques activos
+                             Column('LANG', String(2), nullable=False),  # Idioma del TPV
+                             Column('CURR', String(3), nullable=False)  # Divisa del TPV
+                             )
         # TABLA u: TABLA PARAMETROS DE COMUNICACIÓN
         Table('Table_u', self.metadata,
               Column('NEMO_ACCESO', String(3), nullable=False),  # Tag tipo de acceso permitido
@@ -276,10 +287,9 @@ class DataBase:
               )
         self.metadata.create_all(self.engine)
 
-    @staticmethod
-    def connectEngine(engine_object):
+    def connectEngine(self):
         try:
-            connection = engine_object.connect()
+            connection = self.engine.connect()
         except exc.InternalError as Error:
             raise Error
         return connection
@@ -288,10 +298,19 @@ class DataBase:
     def disconnectEngine(connection_handler):
         connection_handler.close()
 
+    def dropdb(self):
+        try:
+            self.metadata.drop_all(bind=self.engine)
+        except exc.SQLAlchemyError as Error:
+            return False, Error.__str__()
+        return True, "All tables have been dropped successfully"
+
     def loadfile(self, pathfile):
         file = open(pathfile, 'r')
         isfirstframe = True
         for line in file:
+            # Remove line break
+            line = line.replace('\n', '')
             self.__parsetable(line, isfirstframe)
             isfirstframe = False
 
@@ -304,7 +323,7 @@ class DataBase:
             self.logging.error("Error in header {0}".format(data[:1]))
             return False, "Error in frame {0}".format(data[:1])
         if isfirstframe:
-            data = data[32:]
+            data = data[29:]
         else:
             data = data[1:]
         # Table Z:
@@ -332,7 +351,7 @@ class DataBase:
         pass
 
     def __getheader(self, tableline):
-        header = tableline[1:31]
+        header = tableline[:30]
         if header[:4] != "PH24":
             self.logging.error("Error in header {0}".format(header[:4]))
             return False, "Error in header {0}".format(header[:4])
@@ -357,40 +376,27 @@ class DataBase:
         if header[27:] != "000":
             self.logging.error("Error in header {0}".format(header[27:]))
             return False, "Error in header {0}".format(header[27:])
-        return True, tableline[31:-2]
+        return True, tableline[30:]
 
-    def __Table_EE(self, trameE):
-        if trameE[0] is not "#":
-            self.logging.error("Error in Frame {0}".format(trameE[0]))
-            return False, "Error in Frame {0}".format(trameE[0])
-        connection = self.connectEngine(self.engine)
-        trame_data = {}
-        # Número de estación H24.
-        trame_data["EESS"] = trameE[1:8]
-        # Delimitador DC1
-        if trameE[8:12] != "\\021":
-            self.logging.error("Error in Frame {0}".format(trameE[8:12]))
-            return False, "Error in Frame {0}".format(trameE[8:12])
-        # CIF de la estación de servicio
-        trame_data["CIF"] = trameE[12:22]
-        juan = trameE[22:26]
-        if trameE[22:26] != "\\021":
-            self.logging.error("Error in Frame {0}".format(trameE[23:27]))
-            return False, "Error in Frame {0}".format(trameE[23:27])
-        trame_data["NOMB"] = "DPTO. DESARROLLO        "
-        trame_data["Provincia"] = "MADRID"
-        trame_data["DLG"] = "28"
-        trame_data["HH"] = "0000"
-        trame_data["CIE"] = "1"
-        trame_data["CEN"] = "0"
-        trame_data["PASS"] = "99699"
-        trame_data["CHQO"] = "10"
-        trame_data["CHQA"] = "0"
-        trame_data["LANG"] = "ES"
-        trame_data["CURR"] = "978"
-        connection.execute(self.tableEE.insert(), trame_data)
+    def __Table_EE(self, table_record):
+        if table_record[0] != "#":
+            error_msg = "Error in Frame {0}".format(table_record[0])
+            self.logging.error(error_msg)
+            return False, error_msg
+        connection = self.connectEngine()
+        # Remove last chars of string (DC2 and EM)
+        table_record = table_record[1:-2]
+        # Split the record by DC1
+        field_list = table_record.split('\x11')
+        print(field_list)
+        # Build the JSON to insert the data into DB
+        table_json = {}
+        table_column_names = self.tableEE.columns.keys()
+        for index in range(len(table_column_names)):
+            table_json[table_column_names[index]] = field_list[index]
+
+        connection.execute(self.tableEE.insert(), table_json)
         self.disconnectEngine(connection)
-
-
-
-        pass
+        error_msg = "Table E parsed OK"
+        self.logging.info(error_msg)
+        return True, error_msg

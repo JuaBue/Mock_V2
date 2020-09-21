@@ -3,6 +3,7 @@ from Socket import *
 import logging
 import os
 from datetime import date, datetime
+from TelechargeDB import DataBase
 
 LOGGING_LEVEL_FILE = logging.DEBUG
 LOGGING_LEVEL_CONSOLE = logging.DEBUG
@@ -13,14 +14,15 @@ class MockV2:
     socket_handler = None
 
     def load_tables(self):
-        data = TelechargeDB.DataBase(self.logger_handler)
-        data.loadfile("tablas.txt")
+        data = DataBase(self.logger_handler)
+        data.loadfile("tablas_V2.txt")
 
     def __init__(self):
         self.init_logging()
 
     def __del__(self):
-        self.socket_handler.close()
+        if self.socket_handler:
+            self.socket_handler.close()
 
     def init_logging(self):
         # Set logger file, folder and format
@@ -85,7 +87,7 @@ if __name__ == "__main__":
     try:
         mock = MockV2()
         mock.load_tables()
-        mock.run()
+        # mock.run()
 
     except KeyboardInterrupt:
         pass
