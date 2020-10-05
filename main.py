@@ -4,6 +4,7 @@ import logging
 import os
 from datetime import date, datetime
 from TelechargeDB import DataBase
+from Transaction import Transaction
 
 LOGGING_LEVEL_FILE = logging.DEBUG
 LOGGING_LEVEL_CONSOLE = logging.DEBUG
@@ -19,6 +20,7 @@ class MockV2:
 
     def __init__(self):
         self.init_logging()
+        self.transaction = Transaction(self.logger_handler)
 
     def __del__(self):
         if self.socket_handler:
@@ -73,6 +75,10 @@ class MockV2:
                     try:
                         rcv_request = data.decode('ascii')
                         self.logger_handler.info("[RX] {0}".format(rcv_request))
+                        responsestring = self.transaction.process(rcv_request)
+                        respondedata = responsestring.encode('ascii')
+                        print("[TX] {0}".format(responsestring))
+                        current_connection.send(respondedata)
                     except Exception as e:
                         self.logger_handler.exception(e)
                         self.logger_handler.warning(" The frame is ENCRYPTED!!!\n")
@@ -86,8 +92,8 @@ class MockV2:
 if __name__ == "__main__":
     try:
         mock = MockV2()
-        mock.load_tables()
-        # mock.run()
+        # mock.load_tables()
+        mock.run()
 
     except KeyboardInterrupt:
         pass
