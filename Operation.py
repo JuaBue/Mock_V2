@@ -3,6 +3,8 @@ from time import strftime
 
 MAX_LENGTH_HEADER = 30
 DC1_DELIMETER = ''
+DC2_DELIMETER = ''
+DC3_DELIMETER = ''
 HASH_DELIMETER = '#'
 
 
@@ -11,6 +13,10 @@ class Operation:
     def __init__(self, logging_handler):
         self.logging = logging_handler
         self.ParsePos = 0
+        self.error = False
+        self.operation_code = ''
+        self.amount = 0
+        self.entrymode = ''
         self.LastNSM = 0
         self.OpNum = 0
 
@@ -19,31 +25,117 @@ class Operation:
         type_request, b_error = self.__type_request(ped_request)
         if b_error:
             self.logging.error("Error in Operation.")
-            return
+            self.error = True
         merchant, b_error = self.__business_id(ped_request[self.ParsePos:])
         if b_error:
             self.logging.error("Error in Merchant ID.")
-            return
+            self.error = True
         type_machine, b_error = self.__type_machine(ped_request[self.ParsePos:])
         if b_error:
             self.logging.error("Error in Type of machine.")
-            return
+            self.error = True
         id_terminal, b_error = self.__id_terminal(ped_request[self.ParsePos:])
         if b_error:
             self.logging.error("Error in ID of terminal.")
-            return
+            self.error = True
         tables_version, b_error = self.__tables_version(ped_request[self.ParsePos:])
         if b_error:
             self.logging.error("Error in tables version.")
-            return
+            self.error = True
         last_NSM, b_error = self.__last_NSM(ped_request[self.ParsePos:])
         if b_error:
             self.logging.error("Error in last NSM.")
-            return
+            self.error = True
         operation_number, b_error = self.__operation_number(ped_request[self.ParsePos:])
         if b_error:
             self.logging.error("Error in Operation number.")
-            return
+            self.error = True
+        offline_transaction, b_error = self.__offline_transaction(ped_request[self.ParsePos:])
+        if b_error:
+            self.logging.error("Error in Offline Transaction.")
+            self.error = True
+        operation_mode, b_error = self.__operation_mode(ped_request[self.ParsePos:])
+        if b_error:
+            self.logging.error("Error in Operation Mode.")
+            self.error = True
+        currency, b_error = self.__currency(ped_request[self.ParsePos:])
+        if b_error:
+            self.logging.error("Error in Currency.")
+            self.error = True
+        language, b_error = self.__language(ped_request[self.ParsePos:])
+        if b_error:
+            self.logging.error("Error in Language.")
+            self.error = True
+        type_card, b_error = self.__type_card(ped_request[self.ParsePos:])
+        if b_error:
+            self.logging.error("Error in Language.")
+            self.error = True
+        track_1, b_error = self.__track_1(ped_request[self.ParsePos:])
+        if b_error:
+            self.logging.error("Error in Track 1.")
+            self.error = True
+        track_2, b_error = self.__track_2(ped_request[self.ParsePos:])
+        if b_error:
+            self.logging.error("Error in Track 2.")
+            self.error = True
+        extra_data_card, b_error = self.__extra_data_card(ped_request[self.ParsePos:])
+        if b_error:
+            self.logging.error("Error in Extra Data Card.")
+            self.error = True
+        chip_data, b_error = self.__chip_data(ped_request[self.ParsePos:])
+        if b_error:
+            self.logging.error("Error in Chip Data.")
+            self.error = True
+        type_payment, b_error = self.__type_payment(ped_request[self.ParsePos:])
+        if b_error:
+            self.logging.error("Error in Type Payment.")
+            self.error = True
+        operation_code, b_error = self.__operation_code(ped_request[self.ParsePos:])
+        if b_error:
+            self.logging.error("Error in Operation Code.")
+            self.error = True
+        number_products, b_error = self.__number_products(ped_request[self.ParsePos:])
+        if b_error:
+            self.logging.error("Error in Number of products.")
+            self.error = True
+        total_amount, b_error = self.__total_amount(ped_request[self.ParsePos:])
+        if b_error:
+            self.logging.error("Error in Total amount.")
+            self.error = True
+        euro_litres_point, b_error = self.__euro_l_point(ped_request[self.ParsePos:])
+        if b_error:
+            self.logging.error("Error in Euro Litres/Point.")
+            self.error = True
+        gift_product, b_error = self.__gift_prodcode(ped_request[self.ParsePos:])
+        if b_error:
+            self.logging.error("Error in Gift Product Code.")
+            self.error = True
+        unit_price, b_error = self.__unit_price(ped_request[self.ParsePos:])
+        if b_error:
+            self.logging.error("Error in Unit Price.")
+            self.error = True
+        quantity, b_error = self.__quantity_litres(ped_request[self.ParsePos:])
+        if b_error:
+            self.logging.error("Error in Quantity.")
+            self.error = True
+        amount, b_error = self.__amount(ped_request[self.ParsePos:])
+        if b_error:
+            self.logging.error("Error in Amount.")
+            self.error = True
+        discount_product, b_error = self.__discount_product(ped_request[self.ParsePos:])
+        if b_error:
+            self.logging.error("Error in Discount product.")
+            self.error = True
+        #type of entry
+        if '1' == type_card:
+            self.entrymode = 'SWP'
+        elif '2' == type_card:
+            self.entrymode = chip_data[:3]
+        else:
+            self.error = True
+            self.entrymode = 'ERR'
+        #Reset position
+        self.ParsePos = 0
         mydata = self.__build_data()
         return mydata
 
@@ -126,6 +218,214 @@ class Operation:
             b_error = False
         return operation_number, b_error
 
+    def __offline_transaction(self, ped_request):
+        (offline_transaction, position) = self.__get_field(HASH_DELIMETER, ped_request)
+        self.logging.info("Offline Transaction \t{0}".format(offline_transaction))
+        if offline_transaction == '' or len(offline_transaction) is not 3:
+            self.logging.info("Error in offline transaction. Bad format.")
+            b_error = True
+        else:
+            self.ParsePos = self.ParsePos + position
+            b_error = False
+        return offline_transaction, b_error
+
+    def __operation_mode(self, ped_request):
+        operation_mode_key = {'0': 'Autonomous', '1': 'Unattended', '2': 'Polling Attended', '3': 'Polling Unattended'}
+        (operation_mode, position) = self.__get_field(HASH_DELIMETER, ped_request)
+        self.logging.info("Operation Mode \t{0} : {1}".format(operation_mode, operation_mode_key[operation_mode]))
+        if operation_mode == '' or len(operation_mode) > 2 or operation_mode not in ['0', '1', '2', '3']:
+            self.logging.info("Error in operation mode. Bad format.")
+            b_error = True
+        else:
+            self.ParsePos = self.ParsePos + position
+            b_error = False
+        return operation_mode, b_error
+
+    def __currency(self, ped_request):
+        currency_key = {'978': 'EUR', '840': 'USD', '826': 'GBP', '756': 'CHF'}
+        (currency, position) = self.__get_field(HASH_DELIMETER, ped_request)
+        self.logging.info("Currency \t{0} : {1}".format(currency, currency_key[currency]))
+        if currency not in currency_key:
+            self.logging.info("Error in Currency. Bad format.")
+            b_error = True
+        else:
+            self.ParsePos = self.ParsePos + position
+            b_error = False
+        return currency, b_error
+
+    def __language(self, ped_request):
+        language_key = {'DA': 'Danish', 'DE': 'German', 'EL': 'Greek', 'EN': 'English', 'ES': 'Spanish',
+                        'FI': 'Finnish', 'FR': 'French', 'NL': 'Dutch', 'PT': 'Portuguese', 'SW': 'Swedish'}
+        (language, position) = self.__get_field(DC1_DELIMETER, ped_request)
+        self.logging.info("Language \t{0} : {1}".format(language, language_key[language]))
+        if language not in language_key:
+            self.logging.info("Error in language. Bad format.")
+            b_error = True
+        else:
+            self.ParsePos = self.ParsePos + position
+            b_error = False
+        return language, b_error
+
+    def __type_card(self, ped_request):
+        type_card_key = {'1': 'Swiped', '2': 'EMV'}
+        (type_card, position) = self.__get_field(HASH_DELIMETER, ped_request)
+        self.logging.info("Type card \t{0} : {1}".format(type_card, type_card_key[type_card]))
+        if type_card not in type_card_key:
+            self.logging.info("Error in type card. Bad format.")
+            b_error = True
+        else:
+            self.ParsePos = self.ParsePos + position
+            b_error = False
+        return type_card, b_error
+
+    def __track_1(self, ped_request):
+        (track_1, position) = self.__get_field(HASH_DELIMETER, ped_request)
+        self.logging.info("Track 1 \t{0}".format(track_1))
+        self.ParsePos = self.ParsePos + position
+        b_error = False
+        return track_1, b_error
+
+    def __track_2(self, ped_request):
+        (track_2, position) = self.__get_field(DC2_DELIMETER, ped_request)
+        self.logging.info("Track 1 \t{0}".format(track_2))
+        if track_2 == '':
+            self.logging.info("Error in track 2. Bad format.")
+            b_error = True
+        else:
+            self.ParsePos = self.ParsePos + position
+            b_error = False
+        return track_2, b_error
+
+    def __extra_data_card(self, ped_request):
+        (extra_data_card, position) = self.__get_field(DC3_DELIMETER, ped_request)
+        self.logging.info("Extra Data Card \t{0}".format(extra_data_card))
+        self.ParsePos = self.ParsePos + position
+        b_error = False
+        return extra_data_card, b_error
+
+    def __chip_data(self, ped_request):
+        (chip_data, position) = self.__get_field(DC1_DELIMETER, ped_request)
+        self.logging.info("Chip Data \t{0}".format(chip_data))
+        self.ParsePos = self.ParsePos + position
+        b_error = False
+        return chip_data, b_error
+
+    def __type_payment(self, ped_request):
+        (type_payment, position) = self.__get_field(HASH_DELIMETER, ped_request)
+        self.logging.info("Type Payment \t{0}".format(type_payment))
+        if (type_payment and type_payment != '1') and (type_payment and type_payment != '2'):
+            self.logging.info("Error in type Payment. Bad format.")
+            b_error = True
+        else:
+            self.ParsePos = self.ParsePos + position
+            b_error = False
+        return type_payment, b_error
+
+    def __operation_code(self, ped_request):
+        operation_code_key = {'V ': 'Venta', 'A ': "Anulacion Generica", 'CP': 'Consulta Puntos',
+                              'AV': 'Anulacion Venta',
+                              'BF': 'Bonus sale', 'AF': 'Bonus redemption', 'RF': 'Bonus balance sale',
+                              'CF': 'Bonus query - CEPSA', 'PAP': 'Unattended Preauthorization',
+                              'PAC': 'Preauthorization confirmation', 'PAN': 'Preauthorization cancellation',
+                              'AT': 'Partial Refund operation', 'APP': 'Explicit transaction reversal',
+                              'AP': 'Automatic cancellation',
+                              'VY': 'DCC query'}
+        (operation_code, position) = self.__get_field(HASH_DELIMETER, ped_request)
+        self.logging.info("Operation Code \t{0} : {1}".format(operation_code, operation_code_key[operation_code]))
+        if (operation_code not in operation_code_key) and len(operation_code) != 3:
+            self.logging.info("Error in operation code. Bad format.")
+            b_error = True
+        else:
+            self.ParsePos = self.ParsePos + position
+            b_error = False
+            self.operation_code = operation_code
+        return operation_code, b_error
+
+    def __number_products(self, ped_request):
+        (number_products, position) = self.__get_field(HASH_DELIMETER, ped_request)
+        self.logging.info("Number of products \t{0}".format(number_products))
+        if (number_products.isdigit()) and (len(number_products) != 2):
+            self.logging.info("Error in Number of products. Bad format.")
+            b_error = True
+        else:
+            self.ParsePos = self.ParsePos + position
+            b_error = False
+        return number_products, b_error
+
+    def __total_amount(self, ped_request):
+        (total_amount, position) = self.__get_field(HASH_DELIMETER, ped_request)
+        self.logging.info("Total amount \t{0}".format(total_amount))
+        if (total_amount.isdigit()) and (len(total_amount) < 2):
+            self.logging.info("Error in total amount. Bad format.")
+            b_error = True
+        else:
+            self.ParsePos = self.ParsePos + position
+            b_error = False
+            self.amount = float(total_amount)/100
+        return total_amount, b_error
+
+    def __euro_l_point(self, ped_request):
+        (euro_l_point, position) = self.__get_field(DC2_DELIMETER, ped_request)
+        self.logging.info("Euro Litres/Point \t{0}".format(euro_l_point))
+        if euro_l_point and ((euro_l_point.isdigit()) or (int(euro_l_point) < 0)):
+            self.logging.info("Error in Euro Litres/Point. Bad format.")
+            b_error = True
+        else:
+            self.ParsePos = self.ParsePos + position
+            b_error = False
+        return euro_l_point, b_error
+
+    def __gift_prodcode(self, ped_request):
+        (gift_prodcode, position) = self.__get_field(HASH_DELIMETER, ped_request)
+        self.logging.info("Gift Product Code \t{0}".format(gift_prodcode))
+        if gift_prodcode and ((gift_prodcode.isdigit()) or (int(gift_prodcode) < 0)) and (len(gift_prodcode) > 6):
+            self.logging.info("Error in Gift Product Code. Bad format.")
+            b_error = True
+        else:
+            self.ParsePos = self.ParsePos + position
+            b_error = False
+        return gift_prodcode, b_error
+
+    def __unit_price(self, ped_request):
+        (unit_price, position) = self.__get_field(HASH_DELIMETER, ped_request)
+        self.logging.info("Unit Price \t{0}".format(unit_price))
+        if unit_price and (not unit_price.isdigit()):
+            self.logging.info("Error in Unit Price. Bad format.")
+            b_error = True
+        else:
+            self.ParsePos = self.ParsePos + position
+            b_error = False
+        return unit_price, b_error
+
+    def __quantity_litres(self, ped_request):
+        (quantity_litres, position) = self.__get_field(HASH_DELIMETER, ped_request)
+        self.logging.info("Quantity Litres \t{0}".format(quantity_litres))
+        if quantity_litres and (not quantity_litres.isdigit() or (int(quantity_litres) < 0)):
+            self.logging.info("Error in Quantity Litres. Bad format.")
+            b_error = True
+        else:
+            self.ParsePos = self.ParsePos + position
+            b_error = False
+        return quantity_litres, b_error
+
+    def __amount(self, ped_request):
+        (amount, position) = self.__get_field(HASH_DELIMETER, ped_request)
+        self.logging.info("Amount \t{0}".format(amount))
+        self.ParsePos = self.ParsePos + position
+        b_error = False
+        return amount, b_error
+
+    def __discount_product(self, ped_request):
+        (discount_product, position) = self.__get_field(DC1_DELIMETER, ped_request)
+        self.logging.info("Discount Product \t{0}".format(discount_product))
+        if discount_product and (not discount_product.isdigit() or (int(discount_product) < 0)):
+            self.logging.info("Error in Discount Product. Bad format.")
+            b_error = True
+        else:
+            self.ParsePos = self.ParsePos + position
+            b_error = False
+        return discount_product, b_error
+
     @staticmethod
     def __get_field(delimeter, string):
         get_field = ""
@@ -138,7 +438,5 @@ class Operation:
                 get_field = get_field + i
 
     def __build_data(self):
-        data = {}
-        data['lastNSM'] = self.LastNSM
-        data['OpNum'] = self.OpNum
+        data = {'Error': self.error, 'Amount': self.amount, 'EntryMode': self.entrymode, 'OpCode': self.operation_code, 'lastNSM': self.LastNSM, 'OpNum': self.OpNum}
         return data

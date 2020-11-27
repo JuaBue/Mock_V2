@@ -47,7 +47,7 @@ class Transaction:
             return False, "Error in header {0}".format(header[9:12])
         self.type_request = header[9:12]
         # Version del protocolo, 0300 para telecargas.
-        if header[12:16] != "0400" and header[12:16] != "0500" and header[12:16] != "0200":
+        if header[12:16] != "0400" and header[12:16] != "0500" and header[12:16] != "0200" and header[12:16] != "0401":
             self.logging.error("Error in header {0}".format(header[12:16]))
             return False, "Error in header {0}".format(header[12:16])
         # Identificador del mensaje.

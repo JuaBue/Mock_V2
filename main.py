@@ -5,6 +5,7 @@ import os
 from datetime import date, datetime
 from TelechargeDB import DataBase
 from Transaction import Transaction
+from TicketDB import TDataBase
 
 LOGGING_LEVEL_FILE = logging.DEBUG
 LOGGING_LEVEL_CONSOLE = logging.DEBUG
@@ -17,6 +18,10 @@ class MockV2:
     def load_tables(self):
         data = DataBase(self.logger_handler)
         data.loadfile("tablas_V2.txt")
+
+    def load_ticket(self):
+        data = TDataBase(self.logger_handler)
+        data.loadfile("ticket.txt")
 
     def __init__(self):
         self.init_logging()
@@ -79,6 +84,7 @@ class MockV2:
                         respondedata = responsestring.encode('ascii')
                         print("[TX] {0}".format(responsestring))
                         current_connection.send(respondedata)
+                        exit_socket = 1
                     except Exception as e:
                         self.logger_handler.exception(e)
                         self.logger_handler.warning(" The frame is ENCRYPTED!!!\n")
@@ -93,6 +99,7 @@ if __name__ == "__main__":
     try:
         mock = MockV2()
         # mock.load_tables()
+        mock.load_ticket()
         mock.run()
 
     except KeyboardInterrupt:
