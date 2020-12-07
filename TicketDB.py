@@ -105,7 +105,6 @@ class TDataBase:
         self.disconnectEngine(connection)
         if len(result) == 0:
             return ''
-        elif len(result[0]) <= 2:
-            return result[0][1]
-        else:
-            return result[0][1], result[0][2]
+        row_dict = dict(result[0].items())
+        return row_dict
+

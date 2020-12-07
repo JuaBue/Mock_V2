@@ -29,8 +29,6 @@ class Transaction:
             # Operación no conocida.
         return self.response.build_response(data_response)
 
-
-
     def __getheader(self, ped_request):
         header = ped_request[:30]
         if header[:4] != "PH24":

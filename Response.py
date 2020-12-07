@@ -1,9 +1,10 @@
 from datetime import *
 from time import strftime
+from random import randint
 from TicketDB import TDataBase
 
-RESPUESTA_2 = 'PH2401790PDI040099169997620000LACP#98813#{0}#708346{1}#{2}#270195##0####S#SBGENM************************!!!!!!!!ATENCION!!!!!!!!  NUNCA FACILITE EL PIN      POR TELEFONO        H24 NO ESTA REALIZANDO   NINGUNA COMPROBACION  ************************\n\nSBGENM\nSBGENM\nSBGENM\nS#SBGENM\nE.S.CRUCE DE ESPEJA, S.AA 28960649\n0135601-MADRID\n\n*************************  COPIA  -  COMERCIO  *************************\n      paysafecard       ************************30-09-2020         09:15\nNRO. DE OPER: 40498\nCPRF: 1200\nN.SERIE: 2153181655\n\n------------------------Imp. Cupon :      10,00 ------------------------A PAGAR:           10,00\n\n*******************************ATENCION********************************** NO FACILITAR COD.PIN **POR E-MAIL O TELEFONO *************************\n\nSBGENM\nSBGENM\nSBGENM\nSBGENM\nC#SBGENM\nE.S.CRUCE DE ESPEJA, S.AA 28960649\n0135601-MADRID\n\n************************ ORIGINAL PARA CLIENTE  ************************      paysafecard       ************************   YA TIENE DISPONIBLE   LOS IMPORTES DE 10, 25,50 Y 100E DE PAYSAFECARD   EN SU TERMINAL H24   ************************30-09-2020         09:15\n\nNRO. DE OPER: 40498\nCPRF: 1200\nN.SERIE: 2153181655\n------------------------Imp. Cupon :      10,00 ------------------------!!!!!!  ATENCION  !!!!!!  NUNCA DAR CODIGO PIN    POR TELEFONO O EMAIL\nPIN: \nXXXX XXXX XXXX XXXX \n\n------------------------ CUSTODIAR Y CONSERVAR       ESTE TICKET ES          RESPONSABILIDAD     EXCLUSIVA DEL CLIENTE  ------------------------A PAGAR:           10,00------------------------PRODUCTO EXENTO DE IVA  INSTRUCCIONES DE USO:\nSELECIONAR TIENDA ONLINEOPCION PAGO: PAYSAFECARDINTRODUCIR CODIGO PIN   INFO WWW.PAYSAFECARD.COMAT.CLIENTE:\nwww.paysafecard.com/help------------------------ MEDIO PAGO EMITIDO POR PAYSAFE PREPAID SERVICES  PROHIBIDA LA REVENTA  \n\n\n######1000##'
-RESPUESTA = 'PH2400188PDI040099169993960000LERR###{1}#{2}#######S#SBGENM\n------------------------|      MOCK CSACT      ||  {0}  |------------------------\nERROR EN LOS DATOS\n\nPETICION INCORRECTA\n\n\n\n\n\n\n\n'
+RESPONSE = 'PH24{0}PDI040099169993960000L{1}#20602#{2}#{3}#{4}#{5}##{6}##0000##{7}'
+BASE_SIZE = 68
 class Response:
 
     def __init__(self, logging_handler):
@@ -15,15 +16,21 @@ class Response:
         self.OpCode = ''
         self.lastNSM = ''
         self.OpNum = ''
+        self.authonum = ''.join(["{}".format(randint(0, 9)) for num in range(0, 6)])
+        self.upload = self.__getuploadtask()
 
     def build_response(self, data_response):
         if not self.__import_data(data_response):
             return
-        DateResponse = date.today().strftime("%d%m%Y")
-        TimeResponse = datetime.now().strftime("%H%M%S")
-        Time = DateResponse + TimeResponse
-        self.__buildticket()
-        return RESPUESTA.format(Time, self.lastNSM, self.OpNum)
+        ticket, long = self.__buildticket()
+        return RESPONSE.format("{0:0=5d}".format(BASE_SIZE + long),
+                               self.__getresponsecode(),
+                               date.today().strftime("%d%m%Y") + datetime.now().strftime("%H%M%S"),
+                               self.lastNSM,
+                               self.OpNum,
+                               self.authonum,
+                               self.upload,
+                               ticket)
 
     def __import_data(self, data_response):
         if 'Error' in data_response:
@@ -42,6 +49,7 @@ class Response:
 
     def __buildticket(self):
         template = ''
+        ticket_raw = ''
         # Operation result
         if not self.TrameError:
             template += 'A'
@@ -61,35 +69,101 @@ class Response:
             template += 'R'
 
         # Entry Mode
-        if 'CLS' == self.EntryMode:
-            template += 'C'
-        elif 'EMV' == self.EntryMode:
-            template += 'E'
-        elif 'SWP' == self.EntryMode:
-            template += 'S'
-        else:
-            template += '*'
+        template += self.__getentrymode()
 
         # Verification method
-        if 'SWP' == self.EntryMode:
-            template += 'S'
-        elif self.Amount <= 20 and ('EMV' == self.EntryMode or 'CLS' == self.EntryMode):
-            template += 'N'
-        elif 'EMV' == self.EntryMode or 'CLS' == self.EntryMode:
-            template += 'P'
-        else:
-            template += '*'
+        template += self.__getverificationmethod()
 
         # Ticket copy type
         typecopy = ['M', 'C']
         for currentcopy in typecopy:
-            ticket_template = self.ticket.obtain_template(template + currentcopy).split('/')
-            for bloque in ticket_template:
-                current_block = self.ticket.obtain_bloque(bloque)
-                if type(current_block) is tuple:
-                    print("{0}".format(current_block[0]))
+            if 'M' == currentcopy:
+                ticket_raw += 'S#'
+            elif 'C' == currentcopy:
+                ticket_raw += "SBCUTMC#"
+            else:
+                pass
+            ticket_template = self.ticket.obtain_template(template + currentcopy)
+            for block in ticket_template['Bloques'].split('/'):
+                current_block = self.ticket.obtain_bloque(block)
+                if isinstance(current_block, dict):
+                    ticket_raw += self.__ticketformat(current_block)
+                else:
+                    pass
+        ticket_raw = ticket_raw.replace("\\n", "\n").replace("\\r", "\r")
+        longitud = len(ticket_raw)
+        return ticket_raw, longitud
 
-        pass
+    def __ticketformat(self, block):
+        list_placeholder = list()
+        block_ticket = ''
+        if 'Placeholder' in block:
+            for placeholder in block['Placeholder'].split('|'):
+                if 'STATION_NAME' == placeholder:
+                    list_placeholder.append("Puebas Mock")
+                elif 'STATION_CIF' == placeholder:
+                    list_placeholder.append("B 12345678")
+                elif 'STATION_NUMBER' == placeholder:
+                    list_placeholder.append("9988899")
+                elif 'STATION_PROVINCE' == placeholder:
+                    list_placeholder.append("Madrid")
+                elif 'TIMESTAMP' == placeholder:
+                    list_placeholder.append("{:<12}{:>12}".format(date.today().strftime("%d-%m-%y"),
+                                                                  datetime.now().strftime("%H:%M")))
+                elif 'CARDHOLDER' == placeholder:
+                    list_placeholder.append("Juan Bueno")
+                elif 'EXPIRY_DATE' == placeholder:
+                    list_placeholder.append("20/12")
+                elif 'OP_NUMBER' == placeholder:
+                    list_placeholder.append(int(self.OpNum))
+                elif 'TEMPLATE_AMOUNT' == placeholder:
+                    list_placeholder.append(float(self.Amount))
+                elif 'OPCODE' == placeholder:
+                    list_placeholder.append('{:^24}'.format("VENTA"))
+                elif 'AUT_NUMBER' == placeholder:
+                    list_placeholder.append(self.authonum)
+                elif 'PAN_NUM' == placeholder:
+                    list_placeholder.append("1234567890123456")
+                elif 'ENTRY_MET' == placeholder:
+                    list_placeholder.append(self.__getentrymode())
+                elif 'VERI_MET' == placeholder:
+                    list_placeholder.append(self.__getverificationmethod())
+        if list_placeholder:
+            try:
+                block_ticket = block['Contenido'].format(*list_placeholder)
+            except Exception as e:
+                self.logging.exception(e)
+                block_ticket = "[Error en bloque {0}]".format(block['Name'])
+        else:
+            block_ticket = block['Contenido']
+        return block_ticket
 
-    def __ticketheader(self):
-        pass
+    def __getentrymode(self):
+        if 'CLS' == self.EntryMode:
+            return 'C'
+        elif 'EMV' == self.EntryMode:
+            return'E'
+        elif 'SWP' == self.EntryMode:
+            return 'S'
+        else:
+            return '*'
+
+    def __getverificationmethod(self):
+        if 'SWP' == self.EntryMode:
+            return 'S'
+        elif self.Amount <= 20 and ('EMV' == self.EntryMode or 'CLS' == self.EntryMode):
+            return 'N'
+        elif 'EMV' == self.EntryMode or 'CLS' == self.EntryMode:
+            return 'P'
+        else:
+            return '*'
+
+    def __getresponsecode(self):
+        if not self.TrameError:
+            return 'ACP'
+        else:
+            return 'ERR'
+
+    def __getuploadtask(self):
+        # check external value to set this value.
+        return '0'
