@@ -1,11 +1,13 @@
-import TelechargeDB
 from Socket import *
 import logging
 import os
+import sys
 from datetime import date, datetime
 from TelechargeDB import DataBase
 from Transaction import Transaction
 from TicketDB import TDataBase
+from PyQt5.QtWidgets import QApplication, QMainWindow, QMessageBox
+from PyQt5 import uic
 
 LOGGING_LEVEL_FILE = logging.DEBUG
 LOGGING_LEVEL_CONSOLE = logging.DEBUG
@@ -17,11 +19,11 @@ class MockV2:
 
     def load_tables(self):
         data = DataBase(self.logger_handler)
-        data.loadfile("tablas_V2.txt")
+        data.loadfile("conf/tablas_V2.txt")
 
     def load_ticket(self):
         data = TDataBase(self.logger_handler)
-        data.loadfile("ticket.txt")
+        data.loadfile("conf/ticket.txt")
 
     def __init__(self):
         self.init_logging()
@@ -84,7 +86,7 @@ class MockV2:
                         respondedata = responsestring.encode('ascii')
                         print("[TX] {0}".format(responsestring))
                         current_connection.send(respondedata)
-                        exit_socket = 1
+                        exit_socket = True
                     except Exception as e:
                         self.logger_handler.exception(e)
                         self.logger_handler.warning(" The frame is ENCRYPTED!!!\n")
@@ -92,11 +94,21 @@ class MockV2:
 
                 print("\n\n--------------------------------------------------------------------------------\n")
                 self.logger_handler.info("Waiting for a new communication")
-        return
+
+
+class ventana(QMainWindow):
+    def __init__(self):
+        QMainWindow.__init__(self)
+        self.resize(800, 600)
+        self.setWindowTitle("Mock v2.0")
 
 
 if __name__ == "__main__":
     try:
+        app = QApplication(sys.argv)
+        ventana = ventana()
+        ventana.show()
+        app.exec_()
         mock = MockV2()
         # mock.load_tables()
         mock.load_ticket()
