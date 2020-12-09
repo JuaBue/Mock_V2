@@ -6,7 +6,7 @@ from datetime import date, datetime
 from TelechargeDB import DataBase
 from Transaction import Transaction
 from TicketDB import TDataBase
-from PyQt5.QtWidgets import QApplication, QMainWindow, QMessageBox
+from PyQt5.QtWidgets import QApplication, QMainWindow, QMessageBox, QPushButton
 from PyQt5 import uic
 
 LOGGING_LEVEL_FILE = logging.DEBUG
@@ -28,10 +28,14 @@ class MockV2:
     def __init__(self):
         self.init_logging()
         self.transaction = Transaction(self.logger_handler)
+        self.process = True
 
     def __del__(self):
         if self.socket_handler:
             self.socket_handler.close()
+
+    def managesocked(self, value):
+        self.process = value
 
     def init_logging(self):
         # Set logger file, folder and format
@@ -71,7 +75,7 @@ class MockV2:
         self.socket_handler.server_start()
         print(self.socket_handler.get_ip())
         self.logger_handler.info("Server listening...")
-        while True:
+        while self.process:
             current_connection, address = self.socket_handler.accept_socket()
             self.logger_handler.info(" Waiting for frames...\n")
             exit_socket = False
@@ -96,23 +100,46 @@ class MockV2:
                 self.logger_handler.info("Waiting for a new communication")
 
 
-class ventana(QMainWindow):
+class MainWin(QMainWindow):
     def __init__(self):
+        # Iniciar el objeto QMainWindow
         QMainWindow.__init__(self)
-        self.resize(800, 600)
+        # Cargar la configuracion del archivo .ui en el objeto.
+        uic.loadUi("MainWindow\\MainWindow.ui", self)
         self.setWindowTitle("Mock v2.0")
+        # Fijar el tamaño de la ventanda
+        # Fijar el tamaño minimo de la ventana.
+        self.setMinimumSize(500, 300)
+        # Fijar el tamaño maximo de la ventana.
+        self.setMaximumSize(500, 300)
+        self.boton.clicked.connect(self.abrirsocket)
+        self.cerrar.clicked.connect(self.closeEvent)
+        self.mock = MockV2()
+
+    def abrirsocket(self):
+        self.boton.setStyleSheet("border: 3px solid green;")
+        # mock.load_tables()
+        self.mock.load_ticket()
+        self.mock.run()
+
+    def closeEvent(self, event):
+        self.mock.socket_handler.close()
+        self.mock.managesocked(False)
+        close = QMessageBox.question(self,
+                                     "Cerrar Mock v2.0",
+                                     "¿Estas seguro de cerrar la aplicación?",
+                                     QMessageBox.Yes | QMessageBox.No)
+        if close == QMessageBox.Yes:
+            sys.exit()
 
 
 if __name__ == "__main__":
     try:
         app = QApplication(sys.argv)
-        ventana = ventana()
-        ventana.show()
+        MainWin = MainWin()
+        MainWin.show()
         app.exec_()
-        mock = MockV2()
-        # mock.load_tables()
-        mock.load_ticket()
-        mock.run()
+
 
     except KeyboardInterrupt:
         pass
