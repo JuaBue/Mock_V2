@@ -114,7 +114,11 @@ class MainWin(QMainWindow):
         self.setMaximumSize(500, 300)
         self.boton.clicked.connect(self.abrirsocket)
         self.cerrar.clicked.connect(self.closeEvent)
+        self.botoncargar.clicked.connect(self.cargartablas)
         self.mock = MockV2()
+
+    def cargartablas(self):
+        self.mock.load_tables()
 
     def abrirsocket(self):
         self.boton.setStyleSheet("border: 3px solid green;")
@@ -123,8 +127,6 @@ class MainWin(QMainWindow):
         self.mock.run()
 
     def closeEvent(self, event):
-        self.mock.socket_handler.close()
-        self.mock.managesocked(False)
         close = QMessageBox.question(self,
                                      "Cerrar Mock v2.0",
                                      "¿Estas seguro de cerrar la aplicación?",

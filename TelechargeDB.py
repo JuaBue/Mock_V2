@@ -134,13 +134,13 @@ class DataBase:
               Column('Accion', String(1), nullable=False)  # Alta, Baja o Modificación
               )
         # TABLA M: TABLA DE MENUS PRODUCTOS
-        Table('Table_MM', self.metadata,
+        self.tableMM = Table('Table_MM', self.metadata,
               Column('Cod. Menú', String(3), nullable=False),  # Código del Menú obtenido en la tabla W
               Column('Cod. Producto', String(3), nullable=False),  # Código del producto para acceder a la tabla V.
               Column('Accion', String(1), nullable=False)  # Alta, Baja o Modificación
               )
         # TABLA V: TABLA DE PRODUCTOS
-        Table('Table_VV', self.metadata,
+        self.tableVV = Table('Table_VV', self.metadata,
               Column('Cod. Producto', String(3), nullable=False),  # Código de Producto
               Column('Cod. Producto AS400', String(2), nullable=False),  # Código Producto del AS400
               Column('Descripción', String(16), nullable=False),  # Descripción del producto para el Menú y tickets
@@ -348,9 +348,14 @@ class DataBase:
                 return status, data
             tableversion = data[1:4]
         if data[0] == "M":
-            tableversion = data[2:5]
+            status, data = self.__Table_MM(data[4:])
+            if not status:
+                return status, data
+            tableversion = data[1:4]
         if data[0] == "V":
-            tableversion = data[2:5]
+            status, data = self.__Table_VV(data[4:])
+            if not status:
+                return status, data
         if data[0] == "e":
             tableversion = data[2:5]
         if data[0] == "t":
@@ -498,4 +503,61 @@ class DataBase:
         self.logging.info(error_msg)
         return True, error_msg
 
+    def __Table_MM(self, table_record):
+        if table_record[0] != "#":
+            error_msg = "Error in Frame {0}".format(table_record[0])
+            self.logging.error(error_msg)
+            return False, error_msg
+        connection = self.connectEngine()
+        # Remove last chars of string (DC2 and EM)
+        table_record = table_record[1:-2]
+        # Split the record by DC1
+        field_list = table_record.split('\x11')
+        print(field_list)
+        # Build the JSON to insert the data into DB
+        table_list = []
+        for field in field_list:
+            # Build the JSON to insert the data into DB
+            table_json = {}
+            if not field:
+                break
+            clave = [field[0:3], field[3:6], field[6]]
+            table_column_names = self.tableMM.columns.keys()
+            for index in range(len(table_column_names)):
+                table_json[table_column_names[index]] = clave[index]
+            table_list.append(table_json)
+        connection.execute(self.tableMM.insert(), table_list)
+        self.disconnectEngine(connection)
+        error_msg = "Table W parsed OK"
+        self.logging.info(error_msg)
+        return True, error_msg
+
+    def __Table_VV(self, table_record):
+        if table_record[0] != "#":
+            error_msg = "Error in Frame {0}".format(table_record[0])
+            self.logging.error(error_msg)
+            return False, error_msg
+        connection = self.connectEngine()
+        # Remove last chars of string (DC2 and EM)
+        table_record = table_record[1:-2]
+        # Split the record by DC1
+        field_list = table_record.split('\x11')
+        print(field_list)
+        # Build the JSON to insert the data into DB
+        table_list = []
+        for field in field_list:
+            # Build the JSON to insert the data into DB
+            table_json = {}
+            if not field:
+                break
+            clave = [field[0:3], field[3:5], field[5:21], field[21], field[22:25]]
+            table_column_names = self.tableVV.columns.keys()
+            for index in range(len(table_column_names)):
+                table_json[table_column_names[index]] = clave[index]
+            table_list.append(table_json)
+        connection.execute(self.tableVV.insert(), table_list)
+        self.disconnectEngine(connection)
+        error_msg = "Table W parsed OK"
+        self.logging.info(error_msg)
+        return True, error_msg
 
