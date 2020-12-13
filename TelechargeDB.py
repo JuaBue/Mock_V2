@@ -39,13 +39,13 @@ class DataBase:
                              Column('CURR', String(3), nullable=False)  # Divisa del TPV
                              )
         # TABLA u: TABLA PARAMETROS DE COMUNICACIÓN
-        Table('Table_u', self.metadata,
+        self.tableu = Table('Table_u', self.metadata,
               Column('NEMO_ACCESO', String(3), nullable=False),  # Tag tipo de acceso permitido
               Column('NEMO_VALOR', String(3), nullable=False),  # Tag indicativo del parámetro
               Column('VALOR', String(50), nullable=False)  # Valor del parámetro
               )
         # TABLA F: TABLA DE BINES
-        Table('Table_FF', self.metadata,
+        self.tableFF = Table('Table_FF', self.metadata,
               Column('Bin', String(6), nullable=False),  # Numero de Bin
               Column('Operativa', String(1), nullable=False),  # Operativa para el despliegue del menu
               Column('Datos Adicionales', String(1), nullable=False),  # Control sobre las pistas para la petición
@@ -65,7 +65,7 @@ class DataBase:
               Column('Acción', String(1), nullable=False)  # Alta, Baja o Modificación.
               )
         # TABLA x: TABLA BINES PAGO EMV
-        Table('Table_x', self.metadata,
+        self.tablex = Table('Table_x', self.metadata,
               Column('Lognitud BIN', String(1), nullable=False),  # Longitud del BIN
               Column('BIN', String(6), nullable=False)  # BIN sobre el cual se tiene que hacer el control del código
               # de servicio.
@@ -112,7 +112,7 @@ class DataBase:
               # encriptado que se envía en la trama de telecarga) enviados en formato hexadecimal.
               )
         # TABLA e: TABLA DE CLAVES PUBLICAS
-        Table('Table_e', self.metadata,
+        self.tablee = Table('Table_e', self.metadata,
               Column('RID', String(10), nullable=False),  # identificador de proveedor (Visa, Mastercard, Maestro...)
               Column('Index', String(2), nullable=False),  # Indice de la clave en hexadecimal desdoblado
               Column('Modulus Length', String(2), nullable=False),  # En hexadecimal desdoblado
@@ -124,7 +124,7 @@ class DataBase:
               Column('Expire Date', String(6), nullable=False)  # MMDDYY
               )
         # TABLA W: TABLA BIN/MENUS
-        Table('Table_WW', self.metadata,
+        self.tableWW = Table('Table_WW', self.metadata,
               Column('Bin', String(6), nullable=False),  # Numero de Bin
               Column('Cod. Servicio/Operativa', String(3), nullable=False),  # Código de Servicio obtenido de la
               # pista o Operativa obtenido de la Tabla F.
@@ -338,9 +338,15 @@ class DataBase:
             if not status:
                 return status, data
         if data[0] == "F":
-            tableversion = data[2:5]
+            tableversion = data[1:4]
+            status, data = self.__Table_FF(data[4:])
+            if not status:
+                return status, data
         if data[0] == "W":
-            tableversion = data[2:5]
+            status, data = self.__Table_WW(data[4:])
+            if not status:
+                return status, data
+            tableversion = data[1:4]
         if data[0] == "M":
             tableversion = data[2:5]
         if data[0] == "V":
@@ -417,6 +423,7 @@ class DataBase:
         # Build the JSON to insert the data into DB
         table_list = []
         for field in field_list:
+            # Build the JSON to insert the data into DB
             table_json = {}
             if not field:
                 break
@@ -427,6 +434,68 @@ class DataBase:
             table_list.append(table_json)
         connection.execute(self.tableZZ.insert(), table_list)
         self.disconnectEngine(connection)
-        error_msg = "Table E parsed OK"
+        error_msg = "Table Z parsed OK"
         self.logging.info(error_msg)
         return True, error_msg
+
+    def __Table_FF(self, table_record):
+        if table_record[0] != "#":
+            error_msg = "Error in Frame {0}".format(table_record[0])
+            self.logging.error(error_msg)
+            return False, error_msg
+        connection = self.connectEngine()
+        # Remove last chars of string (DC2 and EM)
+        table_record = table_record[1:-2]
+        # Split the record by DC1
+        field_list = table_record.split('\x11')
+        print(field_list)
+        # Build the JSON to insert the data into DB
+        table_list = []
+        for field in field_list:
+            # Build the JSON to insert the data into DB
+            table_json = {}
+            if not field:
+                break
+            clave = [field[0:5], field[6], field[7], field[8], field[9],
+                     field[10], field[11], field[12], field[13], field[14],
+                     field[15], field[16], field[17], field[18]]
+            table_column_names = self.tableFF.columns.keys()
+            for index in range(len(table_column_names)):
+                table_json[table_column_names[index]] = clave[index]
+            table_list.append(table_json)
+        connection.execute(self.tableFF.insert(), table_list)
+        self.disconnectEngine(connection)
+        error_msg = "Table F parsed OK"
+        self.logging.info(error_msg)
+        return True, error_msg
+
+    def __Table_WW(self, table_record):
+        if table_record[0] != "#":
+            error_msg = "Error in Frame {0}".format(table_record[0])
+            self.logging.error(error_msg)
+            return False, error_msg
+        connection = self.connectEngine()
+        # Remove last chars of string (DC2 and EM)
+        table_record = table_record[1:-2]
+        # Split the record by DC1
+        field_list = table_record.split('\x11')
+        print(field_list)
+        # Build the JSON to insert the data into DB
+        table_list = []
+        for field in field_list:
+            # Build the JSON to insert the data into DB
+            table_json = {}
+            if not field:
+                break
+            clave = [field[0:5], field[6:8], field[9:11], field[12], field[13:14], field[15]]
+            table_column_names = self.tableWW.columns.keys()
+            for index in range(len(table_column_names)):
+                table_json[table_column_names[index]] = clave[index]
+            table_list.append(table_json)
+        connection.execute(self.tableWW.insert(), table_list)
+        self.disconnectEngine(connection)
+        error_msg = "Table W parsed OK"
+        self.logging.info(error_msg)
+        return True, error_msg
+
+

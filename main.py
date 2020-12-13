@@ -118,7 +118,7 @@ class MainWin(QMainWindow):
 
     def abrirsocket(self):
         self.boton.setStyleSheet("border: 3px solid green;")
-        # mock.load_tables()
+        self.mock.load_tables()
         self.mock.load_ticket()
         self.mock.run()
 
