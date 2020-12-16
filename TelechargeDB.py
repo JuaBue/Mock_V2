@@ -71,7 +71,7 @@ class DataBase:
               # de servicio.
               )
         # TABLA m: TABLA DE PARAMETROS GENERALES EMV
-        Table('Table_m', self.metadata,
+        self.tablem = Table('Table_m', self.metadata,
               Column('Terminal Type', String(2), nullable=False),  # Tag 9F35: según ICS
               Column('Terminal Capabilities', String(6), nullable=False),  # Tag 9F33: según ICS
               Column('Additional Terminal Capabilities', String(10), nullable=False),  # Tag 9F40 según ICS
@@ -216,7 +216,7 @@ class DataBase:
               Column('BIN', String(10), nullable=False)  # Valor del BIN de Prepago.
               )
         # TABLA n: TABLA DE APLICACIONES SIN CONTACTOS
-        Table('Table_n', self.metadata,
+        self.tablen = Table('Table_n', self.metadata,
               Column('AID', String(32), nullable=False),  # identificador de aplicación (Tag 4F). Hasta 32.
               Column('Application Version Number', String(4), nullable=False),  # Versión de AID (Tag 9F09).
               Column('Application Version PayPass Number', String(4), nullable=False),  # Application Version Number
@@ -233,13 +233,30 @@ class DataBase:
               Column('Target Percent', String(2), nullable=False),  # Para gestión de riesgos del terminal.
               Column('Threshold Value', String(4), nullable=False),  # Para gestión de riesgos del terminal.
               Column('Maximum Target', String(2), nullable=False),  # Para gestión de riesgos del terminal.
-              Column('Etiqueta privada', String(40), nullable=False),  # Etiqueta por defecto a usar cuando el T9F12
-
+              Column('Private CLess App Label', String(40), nullable=False),  # Etiqueta por defecto a usar cuando el T9F12
               Column('AFF', String(1), nullable=False),  # Allowed Form Factors
-              Column('Cless Floor Limit', String(1), nullable=False),  # Reader Contactless Floor Limit
-
-              Column('Etiqueta privada', String(40), nullable=False)  # Etiqueta por defecto a usar cuando el T9F12
-              # o T50 no están.
+              Column('Cless Floor Limit', String(6), nullable=False),  # Reader Contactless Floor Limit
+              Column('Cless Transaction Limit', String(6), nullable=False),  # Reader Contactless Transaction Limit
+              Column('Cless Transaction Limit on CVM', String(6), nullable=False),  # Reader Contactless Transaction
+                            # Limit on-device CVM
+              Column('CVM required Limit', String(6), nullable=False),  # Reader CVM Required Limit
+              Column('Cless Floor Limit - VISA program', String(6), nullable=False),  # Reader Contactless Floor Limit
+                            # - VISA program
+              Column('Cless Transaction Limit - VISA program', String(6), nullable=False),  # Reader
+                            # Contactless Transaction Limit - VISA program
+              Column('CVM Required Limit - VISA program', String(6), nullable=False),  # Reader CVM Required Limit
+                            # - VISA program
+              Column('Cless products processing options', String(2), nullable=False),  # Contact-less products
+                            # processing options
+              Column('VISA program ID.', String(32), nullable=False),  # VISA program ID.
+              Column('Terminal Type', String(2), nullable=False),  # Terminal Type.
+              Column('Terminal Capabilities for cardholder verification', String(6), nullable=False),  # Terminal
+                            # Capabilities for cardholder verification
+              Column('Terminal Capabilities for no cardholder verification', String(6), nullable=False),  # Terminal
+                            # Capabilities for no cardholder verification
+              Column('Additional Terminal Capabilities', String(10), nullable=False),  # Additional Terminal Capabilities
+              Column('Merchant Category Code', String(4), nullable=False),  # Merchant Category Code
+              Column('TTQ', String(8), nullable=False)  # TTQ
               )
         # TABLA I: TABLA BINES INCOMPATIBLES
         Table('Table_II', self.metadata,
@@ -254,10 +271,10 @@ class DataBase:
               # para que H24 procese la tarjeta
               )
         # TABLA g: TABLA DE GRUPOS DE RECONCILIACION
-        Table('Table_g', self.metadata,
+        self.tableg = Table('Table_g', self.metadata,
               Column('AUT_ID', String(15), nullable=False),  # Identificador unívoco del autorizador.
-              Column('AUT_NEMO', String(24), nullable=False),  # Etiqueta asociada al autorizador
-              Column('AUT_ROUTE', String(10), nullable=False)  # Identificador de enrutamiento.
+              Column('AUT_NEMO', String(24), nullable=False)  # Etiqueta asociada al autorizador
+              # Column('AUT_ROUTE', String(10), nullable=False)  # Identificador de enrutamiento.
               )
         # TABLA b: TABLA DE CAPACIDADES OFFLINE
         Table('Table_b', self.metadata,
@@ -396,6 +413,61 @@ class DataBase:
         elif data[0] == "f":
             tableversion = data[1:4]
             status, data = self.__Table_f(data[4:])
+            if not status:
+                return status, data
+        elif data[0] == "b":
+            tableversion = data[1:4]
+            status, data = self.__Table_b(data[4:])
+            if not status:
+                return status, data
+        elif data[0] == "B":
+            tableversion = data[1:4]
+            status, data = self.__Table_BB(data[4:])
+            if not status:
+                return status, data
+        elif data[0] == "c":
+            tableversion = data[1:4]
+            status, data = self.__Table_c(data[4:])
+            if not status:
+                return status, data
+        elif data[0] == "g":
+            tableversion = data[1:4]
+            status, data = self.__Table_g(data[4:])
+            if not status:
+                return status, data
+        elif data[0] == "i":
+            tableversion = data[1:4]
+            status, data = self.__Table_i(data[4:])
+            if not status:
+                return status, data
+        elif data[0] == "I":
+            tableversion = data[1:4]
+            status, data = self.__Table_II(data[4:])
+            if not status:
+                return status, data
+        elif data[0] == "j":
+            tableversion = data[1:4]
+            status, data = self.__Table_j(data[4:])
+            if not status:
+                return status, data
+        elif data[0] == "m":
+            tableversion = data[1:4]
+            status, data = self.__Table_m(data[4:])
+            if not status:
+                return status, data
+        elif data[0] == "n":
+            tableversion = data[1:4]
+            status, data = self.__Table_n(data[4:])
+            if not status:
+                return status, data
+        elif data[0] == "R":
+            tableversion = data[1:4]
+            status, data = self.__Table_RR(data[4:])
+            if not status:
+                return status, data
+        elif data[0] == "u":
+            tableversion = data[1:4]
+            status, data = self.__Table_u(data[4:])
             if not status:
                 return status, data
         self.logging.info(data)
@@ -837,6 +909,128 @@ class DataBase:
             table_list.append(table_json)
         connection.execute(self.tablef.insert(), table_list)
         self.disconnectEngine(connection)
-        error_msg = "Table N parsed OK"
+        error_msg = "Table f parsed OK"
+        return True, error_msg
+
+    def __Table_b(self, table_record):
+        error_msg = "Table b parsed OK"
+        return True, error_msg
+
+    def __Table_BB(self, table_record):
+        error_msg = "Table B parsed OK"
+        return True, error_msg
+
+    def __Table_c(self, table_record):
+        error_msg = "Table c parsed OK"
+        return True, error_msg
+
+    def __Table_g(self, table_record):
+        if table_record[0] != "#":
+            error_msg = "Error in Frame {0}".format(table_record[0])
+            self.logging.error(error_msg)
+            return False, error_msg
+        connection = self.connectEngine()
+        # Remove last chars of string (DC2 and EM)
+        table_record = table_record[1:-2]
+        # Split the record by DC1
+        field_list = table_record.split('\x11')
+        # Build the JSON to insert the data into DB
+        table_list = []
+        for field in field_list:
+            # Build the JSON to insert the data into DB
+            table_json = {}
+            if not field:
+                break
+            clave = field.split('\x1F')
+            table_column_names = self.tableg.columns.keys()
+            for index in range(len(table_column_names)):
+                table_json[table_column_names[index]] = clave[index]
+            table_list.append(table_json)
+        connection.execute(self.tableg.insert(), table_list)
+        self.disconnectEngine(connection)
+        error_msg = "Table g parsed OK"
+        return True, error_msg
+
+    def __Table_i(self, table_record):
+        error_msg = "Table i parsed OK"
+        return True, error_msg
+
+    def __Table_II(self, table_record):
+        error_msg = "Table I parsed OK"
+        return True, error_msg
+
+    def __Table_j(self, table_record):
+        error_msg = "Table j parsed OK"
+        return True, error_msg
+
+    def __Table_m(self, table_record):
+        if table_record[0] != "#":
+            error_msg = "Error in Frame {0}".format(table_record[0])
+            self.logging.error(error_msg)
+            return False, error_msg
+        connection = self.connectEngine()
+        # Remove last chars of string (DC2 and EM)
+        table_record = table_record[1:-2]
+        # Split the record by DC1
+        field = table_record.split('\x11')
+        # Build the JSON to insert the data into DB
+        table_json = {}
+        if not field[0]:
+            return False, "Error en contenido Table m."
+        clave = [field[0][0:2], field[0][2:8], field[0][8:18], field[0][18:20],
+                 field[0][20:24], field[0][24:27], field[0][27:]]
+        table_column_names = self.tablem.columns.keys()
+        for index in range(len(table_column_names)):
+            table_json[table_column_names[index]] = clave[index]
+        connection.execute(self.tablem.insert(), table_json)
+        self.disconnectEngine(connection)
+        error_msg = "Table m parsed OK"
+        return True, error_msg
+
+    def __Table_n(self, table_record):
+        if table_record[0] != "#":
+            error_msg = "Error in Frame {0}".format(table_record[0])
+            self.logging.error(error_msg)
+            return False, error_msg
+        connection = self.connectEngine()
+        # Remove last chars of string (DC2 and EM)
+        table_record = table_record[1:-2]
+        # Split the record by DC1
+        field_list = table_record.split('\x11')
+        # Build the JSON to insert the data into DB
+        table_list = []
+        for field in field_list:
+            # Build the JSON to insert the data into DB
+            table_json = {}
+            if not field:
+                break
+            elif field[0] == '9':
+                continue
+            subfield = field.split('#')
+            clave = [subfield[0],
+                     subfield[1][0:4], subfield[1][4:8], subfield[1][8:18], subfield[1][18:28], subfield[1][28:38],
+                     subfield[1][38:],
+                     subfield[2],
+                     subfield[3][:6], subfield[3][6:9], subfield[3][9:15], subfield[3][15:17], subfield[3][17:23],
+                     subfield[3][23:25], subfield[3][25:],
+                     subfield[4][0], subfield[4][1:7], subfield[4][7:13], subfield[4][13:19], subfield[4][19:25],
+                     subfield[4][25:31], subfield[4][31:37], subfield[4][37:43], subfield[4][43:45], subfield[4][45:],
+                     subfield[5][0:2], subfield[5][2:8], subfield[5][8:14], subfield[5][14:24], subfield[5][24:28],
+                     subfield[5][28:38], subfield[5][38:]]
+            table_column_names = self.tablen.columns.keys()
+            for index in range(len(table_column_names)):
+                table_json[table_column_names[index]] = clave[index]
+            table_list.append(table_json)
+        connection.execute(self.tablen.insert(), table_list)
+        self.disconnectEngine(connection)
+        error_msg = "Table n parsed OK"
+        return True, error_msg
+
+    def __Table_RR(self, table_record):
+        error_msg = "Table R parsed OK"
+        return True, error_msg
+
+    def __Table_u(self, table_record):
+        error_msg = "Table u parsed OK"
         return True, error_msg
 
