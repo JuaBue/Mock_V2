@@ -3,7 +3,7 @@ from time import strftime
 from random import randint
 from TicketDB import TDataBase
 
-RESPONSE = 'PH24{0}PDI040099169993960000L{1}#20602#{2}#{3}#{4}#{5}##{6}##0000##{7}'
+RESPONSE = 'PH24{0}PDI{1}99169993960000L{2}#20602#{3}#{4}#{5}#{6}##{7}##0000##{8}{9}'
 BASE_SIZE = 68
 class Response:
 
@@ -16,6 +16,8 @@ class Response:
         self.OpCode = ''
         self.lastNSM = ''
         self.OpNum = ''
+        self.ProtocolVersion = ''
+        self.chipdata = ''
         self.authonum = ''.join(["{}".format(randint(0, 9)) for num in range(0, 6)])
         self.upload = self.__getuploadtask()
 
@@ -23,13 +25,16 @@ class Response:
         if not self.__import_data(data_response):
             return
         ticket, long = self.__buildticket()
+        long = long + len(self.chipdata)
         return RESPONSE.format("{0:0=5d}".format(BASE_SIZE + long),
+                               self.ProtocolVersion,
                                self.__getresponsecode(),
                                date.today().strftime("%d%m%Y") + datetime.now().strftime("%H%M%S"),
                                self.lastNSM,
                                self.OpNum,
                                self.authonum,
                                self.upload,
+                               self.chipdata,
                                ticket)
 
     def __import_data(self, data_response):
@@ -45,6 +50,8 @@ class Response:
             self.lastNSM = data_response['lastNSM']
         if 'OpNum' in data_response:
             self.OpNum = data_response['OpNum']
+        if 'ProtocolVersion' in data_response:
+            self.ProtocolVersion = data_response['ProtocolVersion']
         return True
 
     def __buildticket(self):
@@ -84,6 +91,8 @@ class Response:
             else:
                 pass
             ticket_template = self.ticket.obtain_template(template + currentcopy)
+            if not ticket_template:
+                ticket_template = self.ticket.obtain_template('DR**M')
             for block in ticket_template['Bloques'].split('/'):
                 current_block = self.ticket.obtain_bloque(block)
                 if isinstance(current_block, dict):
@@ -142,7 +151,8 @@ class Response:
         if 'CLS' == self.EntryMode:
             return 'C'
         elif 'EMV' == self.EntryMode:
-            return'E'
+            self.chipdata = 'EMV#8A023030'
+            return 'E'
         elif 'SWP' == self.EntryMode:
             return 'S'
         else:

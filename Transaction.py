@@ -11,6 +11,7 @@ class Transaction:
         self.type_request = ""
         self.operation = Operation(self.logging)
         self.response = Response(self.logging)
+        self.protocolversion = "0000"
         pass
 
     def process(self, ped_request):
@@ -27,6 +28,7 @@ class Transaction:
         else:
             self.logging.error("Type of request unknown: {0}".format(self.type_request))
             # Operación no conocida.
+        data_response['ProtocolVersion'] = self.protocolversion
         return self.response.build_response(data_response)
 
     def __getheader(self, ped_request):
@@ -48,6 +50,7 @@ class Transaction:
         if header[12:16] != "0400" and header[12:16] != "0500" and header[12:16] != "0200" and header[12:16] != "0401":
             self.logging.error("Error in header {0}".format(header[12:16]))
             return False, "Error in header {0}".format(header[12:16])
+        self.protocolversion = header[12:16]
         # Identificador del mensaje.
         if not header[16:27].isdigit():
             self.logging.error("Error in header {0}".format(header[16:27]))
