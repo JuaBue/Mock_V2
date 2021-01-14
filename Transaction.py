@@ -5,12 +5,12 @@ import logging
 
 class Transaction:
 
-    def __init__(self, logging_handler):
+    def __init__(self, logging_handler, environment):
         self.logging = logging_handler
         self.frame_length = ""
         self.type_request = ""
         self.operation = Operation(self.logging)
-        self.response = Response(self.logging)
+        self.response = Response(self.logging, environment)
         self.protocolversion = "0000"
         pass
 

@@ -4,7 +4,6 @@ from sqlalchemy import create_engine, ForeignKey, exc, desc
 from sqlalchemy.orm import relationship
 
 
-
 class TDataBase:
     def __init__(self, logging_handler, drop_database=True):
         self.logging = logging_handler
@@ -18,21 +17,30 @@ class TDataBase:
             self.dropdb()
             self.init_engine()
 
-
     def init_engine(self):
-        self.engine = create_engine(self.engine_name, echo=True)
+        self.engine = create_engine(self.engine_name, echo=False)
         self.metadata = MetaData(bind=None)
 
         # TABLA E: TABLA DE DATOS DE ESTACIÓN
         self.templates = Table('Templates', self.metadata,
-                             Column('Name', String(5), nullable=False),  # Identificador bloque
-                             Column('Bloques', String(50), nullable=False),  # CIF de la estación de servicio
-                             )
+                               Column('Name', String(5), nullable=False),  # Identificador bloque
+                               Column('Bloques', String(50), nullable=False)  # CIF de la estación de servicio
+                               )
         self.bloques = Table('Bloques', self.metadata,
                              Column('Name', String(10), nullable=False),  # Identificador bloque
                              Column('Contenido', String(100), nullable=False),  # CIF de la estación de servicio
-                             Column('Placeholder', String(100), nullable=False),  # CIF de la estación de servicio
+                             Column('Placeholder', String(100), nullable=False)  # CIF de la estación de servicio
                              )
+        self.operaciones = Table('Operaciones', self.metadata,
+                                 Column('Date', String(10), nullable=False),  # Fecha operación
+                                 Column('Time', String(10), nullable=False),  # Hora operación
+                                 Column('Result', String(3), nullable=False),  # Resultado operación
+                                 Column('Op_Type', String(3), nullable=False),  # Tipo de operación
+                                 Column('Num_Op', String(3), nullable=False),  # Número de operación
+                                 Column('Entry_Mode', String(3), nullable=False),  # Modo de entrada de la operación
+                                 Column('Importe', String(6), nullable=False),  # Importe de la operación
+                                 Column('Ticket', String(200), nullable=False)  # Tiquet de la operación
+                                 )
         self.metadata.create_all(self.engine)
 
     def connectEngine(self):
@@ -93,6 +101,9 @@ class TDataBase:
     def obtain_bloque(self, type):
         return self.__obtain('Bloques', type)
 
+    def registry_operation(self, data):
+        return self.__registry('Operaciones', data)
+
     def __obtain(self, table_name, table_id):
         try:
             table_object = self.metadata.tables[table_name]
@@ -108,3 +119,11 @@ class TDataBase:
         row_dict = dict(result[0].items())
         return row_dict
 
+    def __registry(self, table_name, data):
+        try:
+            table_object = self.metadata.tables[table_name]
+        except KeyError:
+            return "Table required %s not found" % table_name
+        connection = self.connectEngine()
+        result = connection.execute(table_object.insert(), data)
+        self.disconnectEngine(connection)

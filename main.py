@@ -7,13 +7,16 @@ from TelechargeDB import DataBase
 from Transaction import Transaction
 from TicketDB import TDataBase
 from PyQt5.QtWidgets import QApplication, QMainWindow, QMessageBox, QPushButton
-from PyQt5 import uic
+from PyQt5 import uic, QtCore
+from PyQt5.QtCore import QThread
+from PyQt5.QtGui import QPixmap
 
 LOGGING_LEVEL_FILE = logging.DEBUG
 LOGGING_LEVEL_CONSOLE = logging.DEBUG
+ICON_RED_LED = "MainWindow/icon/led-red-on.png"
+ICON_GREEN_LED = "MainWindow/icon/green-led-on.png"
 
-
-class MockV2:
+class MockV2(QThread):
     logger_handler = None
     socket_handler = None
 
@@ -26,9 +29,13 @@ class MockV2:
         data.loadfile("conf/ticket.txt")
 
     def __init__(self):
+        super().__init__()
         self.init_logging()
-        self.transaction = Transaction(self.logger_handler)
         self.process = True
+        self.environment = {}
+        self.telechargetype = 0
+        self.EcupImage = 0
+        self.Ecouponing = False
 
     def __del__(self):
         if self.socket_handler:
@@ -67,6 +74,7 @@ class MockV2:
 
     def run(self):
         # Socket configuration
+        transaction = Transaction(self.logger_handler, self.__getenviroment())
         self.socket_handler = SocketHandler()
         if not self.socket_handler.start(False):
             self.logger_handler.error("Socket configuration error")
@@ -86,7 +94,7 @@ class MockV2:
                     try:
                         rcv_request = data.decode('ascii')
                         self.logger_handler.info("[RX] {0}".format(rcv_request))
-                        responsestring = self.transaction.process(rcv_request)
+                        responsestring = transaction.process(rcv_request)
                         respondedata = responsestring.encode('ascii')
                         print("[TX] {0}".format(responsestring))
                         current_connection.send(respondedata)
@@ -98,6 +106,22 @@ class MockV2:
 
                 print("\n\n--------------------------------------------------------------------------------\n")
                 self.logger_handler.info("Waiting for a new communication")
+
+    def __getenviroment(self):
+        self.environment['TelechargeType'] = self.telechargetype
+        self.environment['EcupImage'] = self.EcupImage
+        self.environment['EcupStatus'] = self.Ecouponing
+        return self.environment
+
+    def settypetelecharge(self, type):
+        self.telechargetype = type
+
+    def setecuponingimage(self, type):
+        self.EcupImage = 'I00' + str(type)
+
+    def enableecuponing(self):
+        self.Ecouponing = True
+
 
 
 class MainWin(QMainWindow):
@@ -115,16 +139,49 @@ class MainWin(QMainWindow):
         self.boton.clicked.connect(self.abrirsocket)
         self.cerrar.clicked.connect(self.closeEvent)
         self.botoncargar.clicked.connect(self.cargartablas)
+        self.botonvolcar.clicked.connect(self.volcartablas)
         self.mock = MockV2()
+        self.mock.load_ticket()
+        # TelechargeType
+        self.TelechargeCombo.addItem("0 - None")
+        self.TelechargeCombo.addItem("1 - Data")
+        self.TelechargeCombo.addItem("3 - SW")
+        self.TelechargeCombo.addItem("5 - Image")
+        self.TelechargeCombo.currentIndexChanged.connect(self.gettypetelecharge)
+        #e-Couponing
+        self.EcoupImg.addItem("I001")
+        self.EcoupImg.addItem("I002")
+        self.EcoupImg.addItem("I003")
+        self.EcoupImg.addItem("I004")
+        self.EcoupImg.addItem("I005")
+        self.EcoupImg.addItem("I006")
+        self.EcoupImg.addItem("I007")
+        self.EcoupImg.addItem("I008")
+        self.EcoupImg.addItem("I009")
+        self.EcoupImg.currentIndexChanged.connect(self.getecuponingimage)
+        self.checkEcup.stateChanged.connect(self.Ecupestatus)
+        #QR
+
+    def gettypetelecharge(self, i):
+        self.mock.settypetelecharge(i)
+
+    def getecuponingimage(self, i):
+        self.mock.setecuponingimage(i + 1)
+
+    def Ecupestatus(self, state):
+        if state == QtCore.Qt.Checked:
+            self.mock.enableecuponing()
 
     def cargartablas(self):
         self.mock.load_tables()
 
+    def volcartablas(self):
+        print("dadsa")
+        pass
+
     def abrirsocket(self):
-        self.boton.setStyleSheet("border: 3px solid green;")
-        self.mock.load_tables()
-        self.mock.load_ticket()
-        self.mock.run()
+        self.mock.start()
+        self.qled.setPixmap(QPixmap(ICON_GREEN_LED))
 
     def closeEvent(self, event):
         close = QMessageBox.question(self,
@@ -141,7 +198,6 @@ if __name__ == "__main__":
         MainWin = MainWin()
         MainWin.show()
         app.exec_()
-
 
     except KeyboardInterrupt:
         pass

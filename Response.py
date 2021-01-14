@@ -3,13 +3,13 @@ from time import strftime
 from random import randint
 from TicketDB import TDataBase
 
-RESPONSE = 'PH24{0}PDI{1}99169993960000L{2}#20602#{3}#{4}#{5}#{6}##{7}##0000##{8}{9}'
+RESPONSE = 'PH24{0}PDI{1}99169993960000L{2}#20602#{3}#{4}#{5}#{6}##{7}##0000##{8}{9}{10}'
 BASE_SIZE = 68
 class Response:
 
-    def __init__(self, logging_handler):
+    def __init__(self, logging_handler, environment):
         self.logging = logging_handler
-        self.ticket = TDataBase(logging_handler)
+        self.ticket = TDataBase(logging_handler, False)
         self.TrameError = False
         self.Amount = 0
         self.EntryMode = ''
@@ -18,24 +18,38 @@ class Response:
         self.OpNum = ''
         self.ProtocolVersion = ''
         self.chipdata = ''
+        self.OpString = ''
+        self.ticketstring = ''
+        self.Result = ''
+        self.ecouponing = ''
         self.authonum = ''.join(["{}".format(randint(0, 9)) for num in range(0, 6)])
         self.upload = self.__getuploadtask()
+        #environment variables
+        self.telechargetype = '0'
+        self.environment = environment
+
 
     def build_response(self, data_response):
         if not self.__import_data(data_response):
             return
-        ticket, long = self.__buildticket()
-        long = long + len(self.chipdata)
+        self.ticketstring, long = self.__buildticket()
+        self.__getresponsecode()
+        self.__log_operation()
+        if 'EcupStatus' in self.environment.keys() and self.environment['EcupStatus'] and \
+                'EcupImage' in self.environment.keys() and self.environment['EcupImage']:
+            self.ecouponing = '{0}####------------------------'.format(self.environment['EcupImage'])
+        long = long + len(self.chipdata) + len(self.ecouponing)
         return RESPONSE.format("{0:0=5d}".format(BASE_SIZE + long),
                                self.ProtocolVersion,
-                               self.__getresponsecode(),
+                               self.Result,
                                date.today().strftime("%d%m%Y") + datetime.now().strftime("%H%M%S"),
                                self.lastNSM,
                                self.OpNum,
                                self.authonum,
                                self.upload,
                                self.chipdata,
-                               ticket)
+                               self.ticketstring,
+                               self.ecouponing)
 
     def __import_data(self, data_response):
         if 'Error' in data_response:
@@ -66,8 +80,16 @@ class Response:
         # Transaction type
         if 'V ' == self.OpCode and not self.TrameError:
             template += 'S'
+            self.OpString = 'VENTA'
         elif 'AV' == self.OpCode and not self.TrameError:
             template += 'C'
+            self.OpString = 'DEVOLUCION'
+        elif 'PAP' == self.OpCode and not self.TrameError:
+            template += 'P'
+            self.OpString = 'PREAUTORIZACION'
+        elif 'PAC' == self.OpCode and not self.TrameError:
+            template += 'K'
+            self.OpString = 'VENTA CONFIRMADA'
         elif self.TrameError:
             template += 'E'
         elif self.TrameError:
@@ -128,7 +150,7 @@ class Response:
                 elif 'TEMPLATE_AMOUNT' == placeholder:
                     list_placeholder.append(float(self.Amount))
                 elif 'OPCODE' == placeholder:
-                    list_placeholder.append('{:^24}'.format("VENTA"))
+                    list_placeholder.append('{:^24}'.format(self.OpString))
                 elif 'AUT_NUMBER' == placeholder:
                     list_placeholder.append(self.authonum)
                 elif 'PAN_NUM' == placeholder:
@@ -170,10 +192,16 @@ class Response:
 
     def __getresponsecode(self):
         if not self.TrameError:
-            return 'ACP'
+            self.Result = 'ACP'
         else:
-            return 'ERR'
+            self.Result = 'ERR'
 
     def __getuploadtask(self):
         # check external value to set this value.
         return '0'
+
+    def __log_operation(self):
+        data = {'Date': date.today().strftime("%d/%m/%Y"), 'Time': datetime.now().strftime("%H:%M:%S"),
+                'Result': self.Result, 'Op_Type': self.OpCode, 'Num_Op': self.OpNum, 'Entry_Mode': self.EntryMode,
+                'Importe': self.Amount,'Ticket': self.ticketstring}
+        self.ticket.registry_operation(data)

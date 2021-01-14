@@ -19,7 +19,7 @@ class DataBase:
             self.init_engine()
 
     def init_engine(self):
-        self.engine = create_engine(self.engine_name, echo=True)
+        self.engine = create_engine(self.engine_name, echo=False)
         self.metadata = MetaData(bind=None)
 
         # TABLA E: TABLA DE DATOS DE ESTACIÓN
