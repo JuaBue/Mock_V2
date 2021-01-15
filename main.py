@@ -40,7 +40,7 @@ class MockV2(QThread):
         self.Ecouponing = False
 
     def __del__(self):
-        self.stop()
+        pass
 
     def managesocked(self, value):
         self.process = value
