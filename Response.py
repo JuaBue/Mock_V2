@@ -34,12 +34,12 @@ class Response:
             return
         self.ticketstring, long = self.__buildticket()
         self.__getresponsecode()
-        self.__log_operation()
+        op_data = self.__log_operation()
         if 'EcupStatus' in self.environment.keys() and self.environment['EcupStatus'] and \
                 'EcupImage' in self.environment.keys() and self.environment['EcupImage']:
             self.ecouponing = '{0}####------------------------'.format(self.environment['EcupImage'])
         long = long + len(self.chipdata) + len(self.ecouponing)
-        return RESPONSE.format("{0:0=5d}".format(BASE_SIZE + long),
+        return op_data, RESPONSE.format("{0:0=5d}".format(BASE_SIZE + long),
                                self.ProtocolVersion,
                                self.Result,
                                date.today().strftime("%d%m%Y") + datetime.now().strftime("%H%M%S"),
@@ -205,3 +205,4 @@ class Response:
                 'Result': self.Result, 'Op_Type': self.OpCode, 'Num_Op': self.OpNum, 'Entry_Mode': self.EntryMode,
                 'Importe': self.Amount,'Ticket': self.ticketstring}
         self.ticket.registry_operation(data)
+        return data

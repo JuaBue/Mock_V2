@@ -6,9 +6,9 @@ from datetime import date, datetime
 from TelechargeDB import DataBase
 from Transaction import Transaction
 from TicketDB import TDataBase
-from PyQt5.QtWidgets import QApplication, QMainWindow, QMessageBox, QPushButton
+from PyQt5.QtWidgets import QApplication, QMainWindow, QMessageBox, QPushButton, QTableWidgetItem, QHeaderView
 from PyQt5 import uic, QtCore
-from PyQt5.QtCore import QThread
+from PyQt5.QtCore import QThread, pyqtSignal
 from PyQt5.QtGui import QPixmap
 
 LOGGING_LEVEL_FILE = logging.DEBUG
@@ -16,9 +16,11 @@ LOGGING_LEVEL_CONSOLE = logging.DEBUG
 ICON_RED_LED = "MainWindow/icon/led-red-on.png"
 ICON_GREEN_LED = "MainWindow/icon/green-led-on.png"
 
+
 class MockV2(QThread):
     logger_handler = None
     socket_handler = None
+    op_signal = pyqtSignal(object)
 
     def load_tables(self):
         data = DataBase(self.logger_handler)
@@ -38,8 +40,7 @@ class MockV2(QThread):
         self.Ecouponing = False
 
     def __del__(self):
-        if self.socket_handler:
-            self.socket_handler.close()
+        self.stop()
 
     def managesocked(self, value):
         self.process = value
@@ -85,6 +86,8 @@ class MockV2(QThread):
         self.logger_handler.info("Server listening...")
         while self.process:
             current_connection, address = self.socket_handler.accept_socket()
+            if not current_connection:
+                break
             self.logger_handler.info(" Waiting for frames...\n")
             exit_socket = False
             while not exit_socket:
@@ -94,11 +97,13 @@ class MockV2(QThread):
                     try:
                         rcv_request = data.decode('ascii')
                         self.logger_handler.info("[RX] {0}".format(rcv_request))
-                        responsestring = transaction.process(rcv_request)
+                        op_data, responsestring = transaction.process(rcv_request)
                         respondedata = responsestring.encode('ascii')
                         print("[TX] {0}".format(responsestring))
                         current_connection.send(respondedata)
                         exit_socket = True
+                        # Emit signal with operation data
+                        self.op_signal.emit(op_data)
                     except Exception as e:
                         self.logger_handler.exception(e)
                         self.logger_handler.warning(" The frame is ENCRYPTED!!!\n")
@@ -106,6 +111,10 @@ class MockV2(QThread):
 
                 print("\n\n--------------------------------------------------------------------------------\n")
                 self.logger_handler.info("Waiting for a new communication")
+
+    def stop(self):
+        self.logger_handler.info("Server stopped...")
+        self.terminate()
 
     def __getenviroment(self):
         self.environment['TelechargeType'] = self.telechargetype
@@ -121,7 +130,6 @@ class MockV2(QThread):
 
     def enableecuponing(self):
         self.Ecouponing = True
-
 
 
 class MainWin(QMainWindow):
@@ -142,13 +150,14 @@ class MainWin(QMainWindow):
         self.botonvolcar.clicked.connect(self.volcartablas)
         self.mock = MockV2()
         self.mock.load_ticket()
+        self.mock.op_signal.connect(self.update_table)
         # TelechargeType
         self.TelechargeCombo.addItem("0 - None")
         self.TelechargeCombo.addItem("1 - Data")
         self.TelechargeCombo.addItem("3 - SW")
         self.TelechargeCombo.addItem("5 - Image")
         self.TelechargeCombo.currentIndexChanged.connect(self.gettypetelecharge)
-        #e-Couponing
+        # e-Couponing
         self.EcoupImg.addItem("I001")
         self.EcoupImg.addItem("I002")
         self.EcoupImg.addItem("I003")
@@ -160,7 +169,15 @@ class MainWin(QMainWindow):
         self.EcoupImg.addItem("I009")
         self.EcoupImg.currentIndexChanged.connect(self.getecuponingimage)
         self.checkEcup.stateChanged.connect(self.Ecupestatus)
-        #QR
+        # QR
+        # Operations table
+        # Row count
+        # self.op_table.setRowCount(10)
+        # Column count
+        self.op_table.setColumnCount(7)
+        self.op_table.setHorizontalHeaderLabels(['Date', 'Time', 'Result', 'Op_Type', 'Num_op', 'Entry_mode', 'Amount'])
+        self.op_table.horizontalHeader().setStretchLastSection(True)
+        self.op_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
 
     def gettypetelecharge(self, i):
         self.mock.settypetelecharge(i)
@@ -180,8 +197,14 @@ class MainWin(QMainWindow):
         pass
 
     def abrirsocket(self):
-        self.mock.start()
-        self.qled.setPixmap(QPixmap(ICON_GREEN_LED))
+        if not self.mock.isRunning():
+            self.mock.start()
+            self.qled.setPixmap(QPixmap(ICON_GREEN_LED))
+            self.boton.setText('Stop MOCK')
+        else:
+            self.mock.stop()
+            self.qled.setPixmap(QPixmap(ICON_RED_LED))
+            self.boton.setText('Run MOCK')
 
     def closeEvent(self, event):
         close = QMessageBox.question(self,
@@ -189,7 +212,20 @@ class MainWin(QMainWindow):
                                      "¿Estas seguro de cerrar la aplicación?",
                                      QMessageBox.Yes | QMessageBox.No)
         if close == QMessageBox.Yes:
+            if self.mock.isRunning():
+                self.mock.stop()
             sys.exit()
+
+    def update_table(self, op_data):
+        row_count = self.op_table.rowCount()  # necessary even when there are no rows in the table
+        self.op_table.insertRow(row_count)
+        self.op_table.setItem(row_count, 0, QTableWidgetItem(op_data['Date']))
+        self.op_table.setItem(row_count, 1, QTableWidgetItem(op_data['Time']))
+        self.op_table.setItem(row_count, 2, QTableWidgetItem(op_data['Result']))
+        self.op_table.setItem(row_count, 3, QTableWidgetItem(op_data['Op_Type']))
+        self.op_table.setItem(row_count, 4, QTableWidgetItem(op_data['Num_Op']))
+        self.op_table.setItem(row_count, 5, QTableWidgetItem(op_data['Entry_Mode']))
+        self.op_table.setItem(row_count, 6, QTableWidgetItem(str(op_data['Importe'])))
 
 
 if __name__ == "__main__":
