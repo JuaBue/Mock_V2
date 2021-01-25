@@ -1,12 +1,12 @@
 from datetime import *
-from time import strftime
 from random import randint
 from TicketDB import TDataBase
 
-RESPONSE = 'PH24{0}PDI{1}99169993960000L{2}#20602#{3}#{4}#{5}#{6}##{7}##0000##{8}{9}{10}'
+RESPONSE = 'PH24{0}PDI{1}{2}3960000L{3}#20602#{4}#{5}#{6}#{7}##{8}##0000##{9}{10}{11}'
 BASE_SIZE = 68
-class Response:
 
+
+class Response:
     def __init__(self, logging_handler, environment):
         self.logging = logging_handler
         self.ticket = TDataBase(logging_handler, False)
@@ -22,6 +22,7 @@ class Response:
         self.ticketstring = ''
         self.Result = ''
         self.ecouponing = ''
+        self.Merchant = ''
         self.authonum = ''.join(["{}".format(randint(0, 9)) for num in range(0, 6)])
         self.upload = self.__getuploadtask()
         #environment variables
@@ -41,6 +42,7 @@ class Response:
         long = long + len(self.chipdata) + len(self.ecouponing)
         return op_data, RESPONSE.format("{0:0=5d}".format(BASE_SIZE + long),
                                self.ProtocolVersion,
+                               self.Merchant,
                                self.Result,
                                date.today().strftime("%d%m%Y") + datetime.now().strftime("%H%M%S"),
                                self.lastNSM,
@@ -66,6 +68,8 @@ class Response:
             self.OpNum = data_response['OpNum']
         if 'ProtocolVersion' in data_response:
             self.ProtocolVersion = data_response['ProtocolVersion']
+        if 'MerchantID' in data_response:
+            self.Merchant = data_response['MerchantID']
         return True
 
     def __buildticket(self):
@@ -198,7 +202,7 @@ class Response:
 
     def __getuploadtask(self):
         # check external value to set this value.
-        return '0'
+        return '1'
 
     def __log_operation(self):
         data = {'Date': date.today().strftime("%d/%m/%Y"), 'Time': datetime.now().strftime("%H:%M:%S"),

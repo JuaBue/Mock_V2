@@ -19,6 +19,7 @@ class Operation:
         self.entrymode = ''
         self.LastNSM = 0
         self.OpNum = 0
+        self.Merchant = ''
 
     def process(self, ped_request):
         # Type of Request.
@@ -26,7 +27,7 @@ class Operation:
         if b_error:
             self.logging.error("Error in Operation.")
             self.error = True
-        merchant, b_error = self.__business_id(ped_request[self.ParsePos:])
+        self.Merchant, b_error = self.__business_id(ped_request[self.ParsePos:])
         if b_error:
             self.logging.error("Error in Merchant ID.")
             self.error = True
@@ -221,7 +222,7 @@ class Operation:
     def __offline_transaction(self, ped_request):
         (offline_transaction, position) = self.__get_field(HASH_DELIMETER, ped_request)
         self.logging.info("Offline Transaction \t{0}".format(offline_transaction))
-        if offline_transaction == '' or len(offline_transaction) is not 3:
+        if offline_transaction == '' or len(offline_transaction) != 3:
             self.logging.info("Error in offline transaction. Bad format.")
             b_error = True
         else:
@@ -438,5 +439,6 @@ class Operation:
                 get_field = get_field + i
 
     def __build_data(self):
-        data = {'Error': self.error, 'Amount': self.amount, 'EntryMode': self.entrymode, 'OpCode': self.operation_code, 'lastNSM': self.LastNSM, 'OpNum': self.OpNum}
+        data = {'Error': self.error, 'Amount': self.amount, 'EntryMode': self.entrymode, 'OpCode': self.operation_code,
+                'lastNSM': self.LastNSM, 'OpNum': self.OpNum, 'MerchantID': self.Merchant}
         return data
