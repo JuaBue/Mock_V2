@@ -1,4 +1,5 @@
 from Socket import *
+from OperationsView import OperationsWin
 import logging
 import os
 import sys
@@ -6,10 +7,12 @@ from datetime import date, datetime
 from TelechargeDB import DataBase
 from Transaction import Transaction
 from TicketDB import TDataBase
-from PyQt5.QtWidgets import QApplication, QMainWindow, QMessageBox, QPushButton, QTableWidgetItem, QHeaderView
+from PyQt5.QtWidgets import QApplication, QMainWindow, QMessageBox, QPushButton, QTableWidgetItem
 from PyQt5 import uic, QtCore
 from PyQt5.QtCore import QThread, pyqtSignal
 from PyQt5.QtGui import QPixmap
+
+RUN_AUTO = True
 
 LOGGING_LEVEL_FILE = logging.DEBUG
 LOGGING_LEVEL_CONSOLE = logging.DEBUG
@@ -146,11 +149,11 @@ class MainWin(QMainWindow):
         self.setMaximumSize(500, 300)
         self.boton.clicked.connect(self.abrirsocket)
         self.cerrar.clicked.connect(self.closeEvent)
+        self.ver_op.clicked.connect(self.show_operations)
         self.botoncargar.clicked.connect(self.cargartablas)
         self.botonvolcar.clicked.connect(self.volcartablas)
         self.mock = MockV2()
         self.mock.load_ticket()
-        self.mock.op_signal.connect(self.update_table)
         # TelechargeType
         self.TelechargeCombo.addItem("0 - None")
         self.TelechargeCombo.addItem("1 - Data")
@@ -170,14 +173,13 @@ class MainWin(QMainWindow):
         self.EcoupImg.currentIndexChanged.connect(self.getecuponingimage)
         self.checkEcup.stateChanged.connect(self.Ecupestatus)
         # QR
-        # Operations table
-        # Row count
-        # self.op_table.setRowCount(10)
-        # Column count
-        self.op_table.setColumnCount(7)
-        self.op_table.setHorizontalHeaderLabels(['Date', 'Time', 'Result', 'Op_Type', 'Num_op', 'Entry_mode', 'Amount'])
-        self.op_table.horizontalHeader().setStretchLastSection(True)
-        self.op_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        # Operations window
+        self.op_win = OperationsWin()
+        # Connect signal to update the table
+        self.mock.op_signal.connect(self.op_win.update_table)
+
+        if RUN_AUTO:
+            self.abrirsocket()
 
     def gettypetelecharge(self, i):
         self.mock.settypetelecharge(i)
@@ -216,16 +218,8 @@ class MainWin(QMainWindow):
                 self.mock.stop()
             sys.exit()
 
-    def update_table(self, op_data):
-        row_count = self.op_table.rowCount()  # necessary even when there are no rows in the table
-        self.op_table.insertRow(row_count)
-        self.op_table.setItem(row_count, 0, QTableWidgetItem(op_data['Date']))
-        self.op_table.setItem(row_count, 1, QTableWidgetItem(op_data['Time']))
-        self.op_table.setItem(row_count, 2, QTableWidgetItem(op_data['Result']))
-        self.op_table.setItem(row_count, 3, QTableWidgetItem(op_data['Op_Type']))
-        self.op_table.setItem(row_count, 4, QTableWidgetItem(op_data['Num_Op']))
-        self.op_table.setItem(row_count, 5, QTableWidgetItem(op_data['Entry_Mode']))
-        self.op_table.setItem(row_count, 6, QTableWidgetItem(str(op_data['Importe'])))
+    def show_operations(self):
+        self.op_win.show()
 
 
 if __name__ == "__main__":

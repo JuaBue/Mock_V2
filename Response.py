@@ -202,7 +202,7 @@ class Response:
 
     def __getuploadtask(self):
         # check external value to set this value.
-        return '1'
+        return '0'
 
     def __log_operation(self):
         data = {'Date': date.today().strftime("%d/%m/%Y"), 'Time': datetime.now().strftime("%H:%M:%S"),
