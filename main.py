@@ -26,12 +26,10 @@ class MockV2(QThread):
     op_signal = pyqtSignal(object)
 
     def load_tables(self):
-        data = DataBase(self.logger_handler)
-        data.loadfile("conf/tablas_V2.txt")
+        self.databasetables.loadfile("conf/tablas_V2.txt")
 
     def load_ticket(self):
-        data = TDataBase(self.logger_handler)
-        data.loadfile("conf/ticket.txt")
+        self.databaseticket.loadfile("conf/ticket.txt")
 
     def __init__(self):
         super().__init__()
@@ -41,6 +39,11 @@ class MockV2(QThread):
         self.telechargetype = 0
         self.EcupImage = 0
         self.Ecouponing = False
+        self.databasetables = DataBase(self.logger_handler)
+        self.databaseticket = TDataBase(self.logger_handler)
+        self.load_tables()
+        self.load_ticket()
+
 
     def __del__(self):
         pass
@@ -78,7 +81,7 @@ class MockV2(QThread):
 
     def run(self):
         # Socket configuration
-        transaction = Transaction(self.logger_handler, self.__getenviroment())
+        transaction = Transaction(self.logger_handler, self.__getenviroment(), self.databasetables)
         self.socket_handler = SocketHandler()
         if not self.socket_handler.start(False):
             self.logger_handler.error("Socket configuration error")
@@ -109,7 +112,7 @@ class MockV2(QThread):
                         self.op_signal.emit(op_data)
                     except Exception as e:
                         self.logger_handler.exception(e)
-                        self.logger_handler.warning(" The frame is ENCRYPTED!!!\n")
+                        self.logger_handler.warning(" ERROR!!!\n")
                         self.logger_handler.info("[RX] {0}".format(data))
 
                 print("\n\n--------------------------------------------------------------------------------\n")
@@ -153,7 +156,6 @@ class MainWin(QMainWindow):
         self.botoncargar.clicked.connect(self.cargartablas)
         self.botonvolcar.clicked.connect(self.volcartablas)
         self.mock = MockV2()
-        self.mock.load_ticket()
         # TelechargeType
         self.TelechargeCombo.addItem("0 - None")
         self.TelechargeCombo.addItem("1 - Data")

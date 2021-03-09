@@ -1034,3 +1034,33 @@ class DataBase:
         error_msg = "Table u parsed OK"
         return True, error_msg
 
+    def __obtain(self, table_name, table_id):
+        try:
+            table_object = self.metadata.tables[table_name]
+        except KeyError:
+            return "Table required %s not found" % table_name
+
+        query = select([table_object]).where(table_object.columns.Prod_id_400 == table_id)
+        connection = self.connectEngine()
+        result = connection.execute(query).fetchall()
+        self.disconnectEngine(connection)
+        if len(result) == 0:
+            return ''
+        row_dict = dict(result[0].items())
+        return row_dict
+
+    def obtain_table_p(self, type):
+        try:
+            table_object = self.metadata.tables['Table_p']
+        except KeyError:
+            return "Table required %s not found" % 'Table_p'
+
+        query = select([table_object]).where(table_object.columns.Prod_id_400 == type)
+        connection = self.connectEngine()
+        result = connection.execute(query).fetchall()
+        self.disconnectEngine(connection)
+        if len(result) == 0:
+            return ''
+        row_dict = dict(result[0].items())
+        return row_dict
+

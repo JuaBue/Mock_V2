@@ -2,14 +2,16 @@ from datetime import *
 from random import randint
 from TicketDB import TDataBase
 
+
 RESPONSE = 'PH24{0}PDI{1}{2}3960000L{3}#20602#{4}#{5}#{6}#{7}##{8}##0000##{9}{10}{11}'
 BASE_SIZE = 68
 
 
 class Response:
-    def __init__(self, logging_handler, environment):
+    def __init__(self, logging_handler, environment, databasetables):
         self.logging = logging_handler
         self.ticket = TDataBase(logging_handler, False)
+        self.databasetables = databasetables
         self.TrameError = False
         self.Amount = 0
         self.EntryMode = ''
@@ -23,6 +25,9 @@ class Response:
         self.Result = ''
         self.ecouponing = ''
         self.Merchant = ''
+        self.TopUp = ''
+        self.cabeceratopup = 'FALTA CONFIG'
+        self.pietopup = 'FALTA CONFIG'
         self.authonum = ''.join(["{}".format(randint(0, 9)) for num in range(0, 6)])
         self.upload = self.__getuploadtask()
         #environment variables
@@ -70,6 +75,8 @@ class Response:
             self.ProtocolVersion = data_response['ProtocolVersion']
         if 'MerchantID' in data_response:
             self.Merchant = data_response['MerchantID']
+        if 'TopUp' in data_response:
+            self.TopUp = data_response['TopUp']
         return True
 
     def __buildticket(self):
@@ -94,6 +101,12 @@ class Response:
         elif 'PAC' == self.OpCode and not self.TrameError:
             template += 'K'
             self.OpString = 'VENTA CONFIRMADA'
+        elif 'MRL' == self.OpCode and not self.TrameError:
+            template += 'T'
+            self.OpString = 'RECARGA'
+            topupinfo = self.__gettopupinfo(self.TopUp)
+            self.cabeceratopup = topupinfo['Cabecera']
+            self.pietopup = topupinfo['Pie']
         elif self.TrameError:
             template += 'E'
         elif self.TrameError:
@@ -163,6 +176,10 @@ class Response:
                     list_placeholder.append(self.__getentrymode())
                 elif 'VERI_MET' == placeholder:
                     list_placeholder.append(self.__getverificationmethod())
+                elif 'CABEZ_TP' == placeholder:
+                    list_placeholder.append(self.cabeceratopup)
+                elif 'PIE_TP' == placeholder:
+                    list_placeholder.append(self.pietopup)
         if list_placeholder:
             try:
                 block_ticket = block['Contenido'].format(*list_placeholder)
@@ -202,7 +219,7 @@ class Response:
 
     def __getuploadtask(self):
         # check external value to set this value.
-        return '0'
+        return '1'
 
     def __log_operation(self):
         data = {'Date': date.today().strftime("%d/%m/%Y"), 'Time': datetime.now().strftime("%H:%M:%S"),
@@ -210,3 +227,7 @@ class Response:
                 'Importe': self.Amount,'Ticket': self.ticketstring}
         self.ticket.registry_operation(data)
         return data
+
+    def __gettopupinfo(self, topupid):
+        topupinfo = self.databasetables.obtain_table_p(topupid)
+        return {'Cabecera': topupinfo['Mensaje Cabec.'], 'Pie': topupinfo['Mensaje Pie']}
