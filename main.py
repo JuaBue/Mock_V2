@@ -44,7 +44,6 @@ class MockV2(QThread):
         self.load_tables()
         self.load_ticket()
 
-
     def __del__(self):
         pass
 
@@ -136,7 +135,7 @@ class MockV2(QThread):
         self.telechargetype = type
 
     def setecuponingimage(self, type):
-        self.EcupImage = 'I00' + str(type)
+        self.EcupImage = 'I00' + str(type + 1)
 
     def enableecuponing(self):
         self.Ecouponing = True
@@ -155,18 +154,20 @@ class MainWin(QMainWindow):
         self.setMinimumSize(500, 300)
         # Fijar el tamaño maximo de la ventana.
         self.setMaximumSize(500, 300)
+        self.mock = MockV2()
+        # Operations window
+        self.op_win = OperationsWin()
         self.boton.clicked.connect(self.abrirsocket)
         self.cerrar.clicked.connect(self.closeEvent)
-        self.ver_op.clicked.connect(self.show_operations)
-        self.botoncargar.clicked.connect(self.cargartablas)
+        self.ver_op.clicked.connect(self.op_win.show)
+        self.botoncargar.clicked.connect(self.mock.load_tables)
         self.botonvolcar.clicked.connect(self.volcartablas)
-        self.mock = MockV2()
         # TelechargeType
         self.TelechargeCombo.addItem("0 - None")
         self.TelechargeCombo.addItem("1 - Data")
         self.TelechargeCombo.addItem("3 - SW")
         self.TelechargeCombo.addItem("5 - Image")
-        self.TelechargeCombo.currentIndexChanged.connect(self.gettypetelecharge)
+        self.TelechargeCombo.currentIndexChanged.connect(self.mock.settypetelecharge)
         # e-Couponing
         self.EcoupImg.addItem("I001")
         self.EcoupImg.addItem("I002")
@@ -177,29 +178,21 @@ class MainWin(QMainWindow):
         self.EcoupImg.addItem("I007")
         self.EcoupImg.addItem("I008")
         self.EcoupImg.addItem("I009")
-        self.EcoupImg.currentIndexChanged.connect(self.getecuponingimage)
+        self.EcoupImg.currentIndexChanged.connect(self.mock.setecuponingimage)
         self.checkEcup.stateChanged.connect(self.Ecupestatus)
         # QR
-        # Operations window
-        self.op_win = OperationsWin()
         # Connect signal to update the table
         self.mock.op_signal.connect(self.op_win.update_table)
+        # Table P
+        self.horatc.timeChanged.connect(self.ontablepchanged)
+        self.fechatc.dateChanged.connect(self.ontablepchanged)
 
         if RUN_AUTO:
             self.abrirsocket()
 
-    def gettypetelecharge(self, i):
-        self.mock.settypetelecharge(i)
-
-    def getecuponingimage(self, i):
-        self.mock.setecuponingimage(i + 1)
-
     def Ecupestatus(self, state):
         if state == QtCore.Qt.Checked:
             self.mock.enableecuponing()
-
-    def cargartablas(self):
-        self.mock.load_tables()
 
     def volcartablas(self):
         print("dadsa")
@@ -225,15 +218,20 @@ class MainWin(QMainWindow):
                 self.mock.stop()
             sys.exit()
 
-    def show_operations(self):
-        self.op_win.show()
+    def ontablepchanged(self, i, e):
+        if type(i) is QtCore.QDate:
+            pass
+        if type(i) is QtCore.QTime:
+            pass
+        else:
+            pass
 
 
 if __name__ == "__main__":
     try:
         app = QApplication(sys.argv)
-        app_icon = QIcon('MainWindow\\icon\\icon_wordline.png')
-        app.setWindowIcon(app_icon)
+        #app_icon = QIcon('MainWindow\\icon\\icon_wordline.png')
+        #app.setWindowIcon(app_icon)
         MainWin = MainWin()
         MainWin.show()
         app.exec_()
