@@ -1,10 +1,12 @@
 from datetime import *
 from random import randint
 from TicketDB import TDataBase
+import string
+import random
 
 
-RESPONSE = 'PH24{0}PDI{1}{2}3960000L{3}#20602#{4}#{5}#{6}#{7}##{8}##0000##{9}{10}{11}'
-BASE_SIZE = 68
+RESPONSE = 'PH24{0}PDI{1}{2}3960000L{3}#20602#{4}#{5}#{6}#{7}##{8}##0000##{9}{10}{11}######{12}##'
+BASE_SIZE = 77
 
 
 class Response:
@@ -28,11 +30,16 @@ class Response:
         self.TopUp = ''
         self.cabeceratopup = 'FALTA CONFIG'
         self.pietopup = 'FALTA CONFIG'
+        self.telephone = 'XXXXXXXXX'
+        self.topupoperation = '00000000000000000000'
+        self.topupanulop = 0
+        self.topuprt = '2828000000000' + ''.join(["{}".format(randint(0, 9)) for num in range(7)])
         self.authonum = ''.join(["{}".format(randint(0, 9)) for num in range(0, 6)])
         self.upload = self.__getuploadtask()
         #environment variables
         self.telechargetype = '0'
         self.environment = environment
+        self.movementdata = ''
 
 
     def build_response(self, data_response):
@@ -44,7 +51,7 @@ class Response:
         if 'EcupStatus' in self.environment.keys() and self.environment['EcupStatus'] and \
                 'EcupImage' in self.environment.keys() and self.environment['EcupImage']:
             self.ecouponing = '{0}####------------------------'.format(self.environment['EcupImage'])
-        long = long + len(self.chipdata) + len(self.ecouponing)
+        long = long + len(self.chipdata) + len(self.ecouponing) + len(self.movementdata)
         return op_data, RESPONSE.format("{0:0=5d}".format(BASE_SIZE + long),
                                self.ProtocolVersion,
                                self.Merchant,
@@ -56,7 +63,8 @@ class Response:
                                self.upload,
                                self.chipdata,
                                self.ticketstring,
-                               self.ecouponing)
+                               self.ecouponing,
+                               self.movementdata)
 
     def __import_data(self, data_response):
         if 'Error' in data_response:
@@ -77,6 +85,14 @@ class Response:
             self.Merchant = data_response['MerchantID']
         if 'TopUp' in data_response:
             self.TopUp = data_response['TopUp']
+        if 'Telephone' in data_response:
+            self.telephone = data_response['Telephone']
+        if 'TopUpOps' in data_response:
+            self.topupoperation = data_response['TopUpOps']
+        if 'TopUpOpsAmount' in data_response:
+            self.topupamount = float(data_response['TopUpOpsAmount']) / 100
+        if 'TopUpOpsAnulaOP' in data_response:
+            self.topupanulop = int(data_response['TopUpOpsAnulaOP'])
         return True
 
     def __buildticket(self):
@@ -107,6 +123,14 @@ class Response:
             topupinfo = self.__gettopupinfo(self.TopUp)
             self.cabeceratopup = topupinfo['Cabecera']
             self.pietopup = topupinfo['Pie']
+            self.movementdata = str(int(self.topupamount) * 100)
+        elif 'AML' == self.OpCode and not self.TrameError:
+            template += 'Q'
+            self.OpString = 'RECARGA'
+            topupinfo = self.__gettopupinfo(self.TopUp)
+            self.cabeceratopup = topupinfo['Cabecera']
+            self.pietopup = topupinfo['Pie']
+            self.movementdata = str(int(self.topupamount) * 100)
         elif self.TrameError:
             template += 'E'
         elif self.TrameError:
@@ -180,6 +204,22 @@ class Response:
                     list_placeholder.append(self.cabeceratopup)
                 elif 'PIE_TP' == placeholder:
                     list_placeholder.append(self.pietopup)
+                elif 'TELEPHONE' == placeholder:
+                    list_placeholder.append(self.telephone)
+                elif 'TOPUPCOMPANY' == placeholder:
+                    list_placeholder.append(self.TopUp)
+                elif 'TOPUPOPERATION' == placeholder:
+                    list_placeholder.append(self.topupoperation)
+                elif 'TOPUP_AMOUNT' == placeholder:
+                    list_placeholder.append("{:10.2f}".format(self.topupamount))
+                elif 'TOPUPREFOP' == placeholder:
+                    list_placeholder.append(''.join(random.SystemRandom().choice(string.ascii_uppercase +
+                                                                                 string.digits) for _ in range(6)))
+                elif 'TOPUPRT' == placeholder:
+                    list_placeholder.append(self.topuprt)
+                elif 'TOPUPANULOP' == placeholder:
+                    list_placeholder.append(self.topupanulop)
+
         if list_placeholder:
             try:
                 block_ticket = block['Contenido'].format(*list_placeholder)

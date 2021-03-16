@@ -1,5 +1,5 @@
 from Response import Response
-from Telecharge import Telecharge
+from Telecharge import Telecharge, DC2_DELIMETER
 import re
 import logging
 
@@ -29,7 +29,11 @@ class Transaction:
         self.LastNSM = 0
         self.OpNum = 0
         self.Merchant = ''
+        self.telephone = ''
+        self.topupoperation = ''
         self.giftprodcode = ''
+        self.topupanulope = 0
+        self.topupamount = '000000000'
         pass
 
     def process(self, ped_request):
@@ -95,6 +99,8 @@ class Transaction:
         return True, ped_request[30:]
 
     def parsetrame(self, ped_request):
+        #Reset position
+        self.ParsePos = 0
         # Type of Request.
         type_request, b_error = self.__type_request(ped_request)
         if b_error:
@@ -180,38 +186,40 @@ class Transaction:
         if b_error:
             self.logging.error("Error in Euro Litres/Point.")
             self.error = True
-        self.giftprodcode, b_error = self.__gift_prodcode(ped_request[self.ParsePos:])
-        if b_error:
-            self.logging.error("Error in Gift Product Code.")
-            self.error = True
-        unit_price, b_error = self.__unit_price(ped_request[self.ParsePos:])
-        if b_error:
-            self.logging.error("Error in Unit Price.")
-            self.error = True
-        quantity, b_error = self.__quantity_litres(ped_request[self.ParsePos:])
-        if b_error:
-            self.logging.error("Error in Quantity.")
-            self.error = True
-        amount, b_error = self.__amount(ped_request[self.ParsePos:])
-        if b_error:
-            self.logging.error("Error in Amount.")
-            self.error = True
+        if operation_code != 'AML':
+            self.giftprodcode, b_error = self.__gift_prodcode(ped_request[self.ParsePos:])
+            if b_error:
+                self.logging.error("Error in Gift Product Code.")
+                self.error = True
+            unit_price, b_error = self.__unit_price(ped_request[self.ParsePos:])
+            if b_error:
+                self.logging.error("Error in Unit Price.")
+                self.error = True
+            quantity, b_error = self.__quantity_litres(ped_request[self.ParsePos:])
+            if b_error:
+                self.logging.error("Error in Quantity.")
+                self.error = True
+            amount, b_error = self.__amount(ped_request[self.ParsePos:])
+            if b_error:
+                self.logging.error("Error in Amount.")
+                self.error = True
         discount_product, b_error = self.__discount_product(ped_request[self.ParsePos:])
         if b_error:
             self.logging.error("Error in Discount product.")
             self.error = True
+        extra_data, b_error = self.__extradata(ped_request[self.ParsePos:])
         #type of entry
         if '1' == type_card:
             self.entrymode = 'SWP'
         elif '2' == type_card:
             self.entrymode = chip_data[:3]
-        elif '' == type_card:
+        elif '' == type_card and 'MRL' == self.operation_code:
             self.entrymode = 'MRL'
+        elif '' == type_card and 'AML' == self.operation_code:
+            self.entrymode = 'AML'
         else:
             self.error = True
             self.entrymode = 'ERR'
-        #Reset position
-        self.ParsePos = 0
         mydata = self.__build_data()
         return mydata
 
@@ -400,7 +408,7 @@ class Transaction:
                               'PAC': 'Preauthorization confirmation', 'PAN': 'Preauthorization cancellation',
                               'AT': 'Partial Refund operation', 'APP': 'Explicit transaction reversal',
                               'AP': 'Automatic cancellation',
-                              'VY': 'DCC query', 'MRL': 'TopUps'}
+                              'VY': 'DCC query', 'MRL': 'TopUps', 'AML': 'Anulacion TopUps'}
         (operation_code, position) = self.__get_field(HASH_DELIMETER, ped_request)
         self.logging.info("Operation Code \t{0} : {1}".format(operation_code, operation_code_key[operation_code]))
         if (operation_code not in operation_code_key) and len(operation_code) != 3:
@@ -501,6 +509,31 @@ class Transaction:
             b_error = False
         return discount_product, b_error
 
+    def __extradata(self, ped_request):
+        (extra_data, position) = self.__get_field(DC2_DELIMETER, ped_request)
+        self.logging.info("Extra data \t{0}".format(extra_data))
+        if not extra_data:
+            self.logging.info("Error in Extra data. Bad format.")
+            b_error = True
+        else:
+            self.ParsePos = self.ParsePos + position
+            b_error = False
+            dataextra = extra_data.split('/')
+            for value in dataextra:
+                if not value:
+                    pass
+                elif value[0] == 'T':
+                    self.telephone = value[1:]
+                elif value[0] == 'X':
+                    self.topupoperation = value[1:]
+                elif value[0] == 'A':
+                    self.topupanulope = value[1:]
+                elif value[0] == 'K':
+                    self.giftprodcode = value[1:]
+                elif value[0] == 'P':
+                    self.topupamount = value[1:]
+        return extra_data, b_error
+
     @staticmethod
     def __get_field(delimeter, string):
         get_field = ""
@@ -513,10 +546,12 @@ class Transaction:
                 get_field = get_field + i
 
     def __build_data(self):
-        if 'MRL' == self.entrymode:
+        if 'MRL' == self.entrymode or 'AML' == self.entrymode:
             data = {'Error': self.error, 'Amount': self.amount, 'EntryMode': self.entrymode,
                     'OpCode': self.operation_code, 'lastNSM': self.LastNSM, 'OpNum': self.OpNum,
-                    'MerchantID': self.Merchant, 'TopUp': self.giftprodcode}
+                    'MerchantID': self.Merchant, 'TopUp': self.giftprodcode, 'Telephone': self.telephone,
+                    'TopUpOps': self.topupoperation, 'TopUpOpsAmount': self.topupamount,
+                    'TopUpOpsAnulaOP': self.topupanulope}
         else:
             data = {'Error': self.error, 'Amount': self.amount, 'EntryMode': self.entrymode,
                     'OpCode': self.operation_code, 'lastNSM': self.LastNSM, 'OpNum': self.OpNum,

@@ -10,7 +10,7 @@ from TicketDB import TDataBase
 from PyQt5.QtWidgets import QApplication, QMainWindow, QMessageBox, QPushButton, QTableWidgetItem
 from PyQt5 import uic, QtCore
 from PyQt5.QtCore import QThread, pyqtSignal
-from PyQt5.QtGui import QPixmap
+from PyQt5.QtGui import QPixmap, QIcon
 
 RUN_AUTO = True
 
@@ -39,8 +39,8 @@ class MockV2(QThread):
         self.telechargetype = 0
         self.EcupImage = 0
         self.Ecouponing = False
-        self.databasetables = DataBase(self.logger_handler)
         self.databaseticket = TDataBase(self.logger_handler)
+        self.databasetables = DataBase(self.logger_handler)
         self.load_tables()
         self.load_ticket()
 
@@ -110,6 +110,10 @@ class MockV2(QThread):
                         exit_socket = True
                         # Emit signal with operation data
                         self.op_signal.emit(op_data)
+                    except UnicodeDecodeError as e:
+                        self.logger_handler.exception(e)
+                        self.logger_handler.warning(" CADENA ENCRIPTADA!!!\n")
+                        self.logger_handler.info("[RX] {0}".format(data))
                     except Exception as e:
                         self.logger_handler.exception(e)
                         self.logger_handler.warning(" ERROR!!!\n")
@@ -145,6 +149,7 @@ class MainWin(QMainWindow):
         # Cargar la configuracion del archivo .ui en el objeto.
         uic.loadUi("MainWindow\\MainWindow.ui", self)
         self.setWindowTitle("Mock v2.0")
+        self.setWindowIcon(QIcon('MainWindow\\icon\\icon_wordline.png'))
         # Fijar el tamaño de la ventanda
         # Fijar el tamaño minimo de la ventana.
         self.setMinimumSize(500, 300)
@@ -227,6 +232,8 @@ class MainWin(QMainWindow):
 if __name__ == "__main__":
     try:
         app = QApplication(sys.argv)
+        app_icon = QIcon('MainWindow\\icon\\icon_wordline.png')
+        app.setWindowIcon(app_icon)
         MainWin = MainWin()
         MainWin.show()
         app.exec_()
