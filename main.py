@@ -74,7 +74,6 @@ class MockV2(QThread):
         # Add the handler to the logger
         self.logger_handler.addHandler(file_handler)
         self.logger_handler.addHandler(console_handler)
-
         self.logger_handler.info("Logging into: \t{0}".format(os.path.abspath(file_name)))
         return
 
@@ -87,7 +86,6 @@ class MockV2(QThread):
             self.socket_handler.close()
             exit(ERROR_SOCKET_CONFIGURATION)
         self.socket_handler.server_start()
-        print(self.socket_handler.get_ip())
         self.logger_handler.info("Server listening...")
         while self.process:
             current_connection, address = self.socket_handler.accept_socket()
@@ -151,9 +149,9 @@ class MainWin(QMainWindow):
         self.setWindowIcon(QIcon('MainWindow\\icon\\icon_wordline.png'))
         # Fijar el tamaño de la ventanda
         # Fijar el tamaño minimo de la ventana.
-        self.setMinimumSize(500, 300)
+        self.setMinimumSize(500, 305)
         # Fijar el tamaño maximo de la ventana.
-        self.setMaximumSize(500, 300)
+        self.setMaximumSize(500, 305)
         self.mock = MockV2()
         # Operations window
         self.op_win = OperationsWin()
@@ -184,8 +182,9 @@ class MainWin(QMainWindow):
         # Connect signal to update the table
         self.mock.op_signal.connect(self.op_win.update_table)
         # Table P
-        self.horatc.timeChanged.connect(self.ontablepchanged)
-        self.fechatc.dateChanged.connect(self.ontablepchanged)
+        self.horatc.setTime(QtCore.QTime.currentTime())
+        self.fechatc.setDate(QtCore.QDate.currentDate())
+
 
         if RUN_AUTO:
             self.abrirsocket()
@@ -203,10 +202,12 @@ class MainWin(QMainWindow):
             self.mock.start()
             self.qled.setPixmap(QPixmap(ICON_GREEN_LED))
             self.boton.setText('Stop MOCK')
+            self.infoip.setText(self.getipasstring())
         else:
             self.mock.stop()
             self.qled.setPixmap(QPixmap(ICON_RED_LED))
             self.boton.setText('Run MOCK')
+            self.infoip.setText('IP:- \r\r\r| PORT: -')
 
     def closeEvent(self, event):
         close = QMessageBox.question(self,
@@ -218,13 +219,14 @@ class MainWin(QMainWindow):
                 self.mock.stop()
             sys.exit()
 
-    def ontablepchanged(self, i, e):
-        if type(i) is QtCore.QDate:
-            pass
-        if type(i) is QtCore.QTime:
-            pass
-        else:
-            pass
+    def getipasstring(self):
+        listofip = socket.gethostbyname_ex(socket.gethostname())[-1]
+        iptext = ' | IP: '.join([str(elem) for elem in listofip])
+        iptext = 'IP: ' + iptext + '\r\r\r| PORT: 4445'
+        return iptext
+
+
+
 
 
 if __name__ == "__main__":

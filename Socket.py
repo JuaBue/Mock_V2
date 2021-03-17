@@ -38,7 +38,7 @@ class SocketHandler:
 
     def get_ip(self):
         # Get ip address used by the socket.
-        return socket.gethostbyname(socket.gethostname())
+        return socket.gethostbyname_ex(socket.gethostname())[-1]
 
     def set_port(self, port=504):
         if self.port != port:
