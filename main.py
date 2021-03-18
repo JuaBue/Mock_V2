@@ -226,9 +226,6 @@ class MainWin(QMainWindow):
         return iptext
 
 
-
-
-
 if __name__ == "__main__":
     try:
         app = QApplication(sys.argv)

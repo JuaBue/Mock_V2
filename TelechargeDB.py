@@ -322,11 +322,15 @@ class DataBase:
     def loadfile(self, pathfile):
         file = open(pathfile, 'r')
         isfirstframe = True
+        self.logging.info("Starting to parse the tables...")
         for line in file:
             # Remove line break
             line = line.replace('\n', '')
-            self.__parsetable(line, isfirstframe)
+            error, data = self.__parsetable(line, isfirstframe)
             isfirstframe = False
+            if error:
+                self.logging.info("Error in the table: {0}".format(data))
+        self.logging.info("Finished to parse the tables!")
 
     def __parsetable(self, tableline, isfirstframe):
         status, data = self.__getheader(tableline)
@@ -470,7 +474,8 @@ class DataBase:
             status, data = self.__Table_u(data[4:])
             if not status:
                 return status, data
-        self.logging.info(data)
+        return False, ""
+
 
     def __getheader(self, tableline):
         header = tableline[:30]

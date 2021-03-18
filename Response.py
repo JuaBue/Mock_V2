@@ -52,7 +52,7 @@ class Response:
                 'EcupImage' in self.environment.keys() and self.environment['EcupImage']:
             self.ecouponing = '{0}####------------------------'.format(self.environment['EcupImage'])
         long = long + len(self.chipdata) + len(self.ecouponing) + len(self.movementdata)
-        return op_data, RESPONSE.format("{0:0=5d}".format(BASE_SIZE + long),
+        response = RESPONSE.format("{0:0=5d}".format(BASE_SIZE + long),
                                self.ProtocolVersion,
                                self.Merchant,
                                self.Result,
@@ -65,6 +65,8 @@ class Response:
                                self.ticketstring,
                                self.ecouponing,
                                self.movementdata)
+        self.logging.info("[TX] {0}".format(response))
+        return op_data, response
 
     def __import_data(self, data_response):
         self.__reset_data()
