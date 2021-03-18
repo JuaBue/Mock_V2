@@ -36,7 +36,8 @@ class Transaction:
         self.topupamount = '000000000'
         pass
 
-    def process(self, ped_request):
+    def process(self, ped_request, environment):
+        self.environment = environment
         error, request = self.__getheader(ped_request)
         if self.type_request == "PDI":
             # Operación bancaria

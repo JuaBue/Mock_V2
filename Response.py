@@ -67,6 +67,7 @@ class Response:
                                self.movementdata)
 
     def __import_data(self, data_response):
+        self.__reset_data()
         if 'Error' in data_response:
             self.TrameError = data_response['Error']
         if 'Amount' in data_response:
@@ -94,6 +95,23 @@ class Response:
         if 'TopUpOpsAnulaOP' in data_response:
             self.topupanulop = int(data_response['TopUpOpsAnulaOP'])
         return True
+
+    def __reset_data(self):
+        self.TrameError = False
+        self.Amount = 0
+        self.EntryMode = ''
+        self.OpCode = ''
+        self.lastNSM = ''
+        self.OpNum = ''
+        self.ProtocolVersion = ''
+        self.Merchant = ''
+        self.TopUp = ''
+        self.telephone = 'XXXXXXXXX'
+        self.topupoperation = '00000000000000000000'
+        self.topupamount = 0
+        self.topuprt = '2828000000000' + ''.join(["{}".format(randint(0, 9)) for num in range(7)])
+        self.authonum = ''.join(["{}".format(randint(0, 9)) for num in range(0, 6)])
+        self.topupanulop = 0
 
     def __buildticket(self):
         template = ''

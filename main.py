@@ -100,12 +100,12 @@ class MockV2(QThread):
                     try:
                         rcv_request = data.decode('ascii')
                         self.logger_handler.info("[RX] {0}".format(rcv_request))
-                        op_data, responsestring = transaction.process(rcv_request)
+                        op_data, responsestring = transaction.process(rcv_request, self.__getenviroment())
                         respondedata = responsestring.encode('ascii')
                         print("[TX] {0}".format(responsestring))
                         current_connection.send(respondedata)
                         exit_socket = True
-                        # Emit signal with operation data
+                        # Emit signal with operation data1
                         self.op_signal.emit(op_data)
                     except UnicodeDecodeError as e:
                         self.logger_handler.exception(e)
