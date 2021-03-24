@@ -294,7 +294,7 @@ class Transaction:
     def __operation_number(self, ped_request):
         (operation_number, position) = self.__get_field(HASH_DELIMETER, ped_request)
         self.logging.info("operation number \t{0}".format(operation_number))
-        if int(operation_number) <= 0:
+        if not operation_number.isdigit():
             self.logging.info("Error in operation number. Bad format.")
             b_error = True
         else:

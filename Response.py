@@ -175,6 +175,7 @@ class Response:
                 pass
             ticket_template = self.ticket.obtain_template(template + currentcopy)
             if not ticket_template:
+                self.Result = 'ERR'
                 ticket_template = self.ticket.obtain_template('DR**M')
             for block in ticket_template['Bloques'].split('/'):
                 current_block = self.ticket.obtain_bloque(block)
@@ -279,7 +280,7 @@ class Response:
 
     def __getuploadtask(self):
         # check external value to set this value.
-        return '1'
+        return '0'
 
     def __log_operation(self):
         data = {'Date': date.today().strftime("%d/%m/%Y"), 'Time': datetime.now().strftime("%H:%M:%S"),
