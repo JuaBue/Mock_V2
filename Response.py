@@ -184,6 +184,7 @@ class Response:
                 pass
             ticket_template = self.ticket.obtain_template(template + currentcopy)
             if not ticket_template:
+                self.Result = 'ERR'
                 ticket_template = self.ticket.obtain_template('DR**M')
                 self.TicketError = True
             for block in ticket_template['Bloques'].split('/'):
