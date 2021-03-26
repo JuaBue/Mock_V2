@@ -12,12 +12,16 @@ HASH_DELIMETER = '#'
 ackTemplate = "^PH24[0-9]{5}PTD0300[0-9]{14}MOK[]$"
 nackTemplate = "^PH24[0-9]{5}PTD0300[0-9]{14}MNOK[]$"
 
+
+class TablePException(Exception):
+    pass
+
 class Transaction:
 
-    def __init__(self, logging_handler, environment, databasetables):
+    def __init__(self, logging_handler, databasetables):
         self.logging = logging_handler
-        self.environment = environment
         self.databasetables = databasetables
+        self.response = Response(self.logging, self.databasetables)
         self.frame_length = ""
         self.type_request = ""
         self.protocolversion = "0000"
@@ -37,29 +41,31 @@ class Transaction:
         pass
 
     def process(self, ped_request, environment):
-        self.environment = environment
         error, request = self.__getheader(ped_request)
         if self.type_request == "PDI":
             # Operación bancaria
             # data_response = self.operation.process(request)
             data_response = self.parsetrame(request)
             data_response['ProtocolVersion'] = self.protocolversion
-            op_data, response = Response(self.logging, self.environment, self.databasetables).build_response(data_response)
+            op_data, response = self.response.build_response(data_response, environment)
         elif self.type_request == "PTD":
             # Operación telecarga
-            telecarga = Telecharge(self.logging, self.environment)
+            telecarga = Telecharge(self.logging)
             if re.search(ackTemplate, ped_request, re.DOTALL):
                 data_response = {}
-                op_data, response = telecarga.build_response(data_response, True)
+                op_data, response = telecarga.build_response(data_response, True, environment)
                 response = ''
             elif re.search(nackTemplate, ped_request, re.DOTALL):
                 data_response = {}
-                op_data, response = telecarga.build_response(data_response, True)
+                op_data, response = telecarga.build_response(data_response, True, environment)
                 response = ''
             else:
                 data_response = telecarga.process(request)
                 data_response['ProtocolVersion'] = self.protocolversion
-                op_data, response = telecarga.build_response(data_response, False)
+                if self.__checkTablePInfo(environment):
+                    op_data, response = telecarga.build_response(data_response, False, environment)
+                else:
+                    raise TablePException
         elif self.type_request == "PPL":
             # Operación Polling
             pass
@@ -147,18 +153,22 @@ class Transaction:
         if b_error:
             self.logging.error("Error in Language.")
             self.error = True
-        type_card, b_error = self.__type_card(ped_request[self.ParsePos:])
-        if b_error:
-            self.logging.error("Error in Language.")
-            self.error = True
-        track_1, b_error = self.__track_1(ped_request[self.ParsePos:])
-        if b_error:
-            self.logging.error("Error in Track 1.")
-            self.error = True
-        track_2, b_error = self.__track_2(ped_request[self.ParsePos:])
-        if b_error:
-            self.logging.error("Error in Track 2.")
-            self.error = True
+        # This fields are not present in the command PAR
+        if ped_request[self.ParsePos] is not DC2_DELIMETER:
+            type_card, b_error = self.__type_card(ped_request[self.ParsePos:])
+            if b_error:
+                self.logging.error("Error in Language.")
+                self.error = True
+            track_1, b_error = self.__track_1(ped_request[self.ParsePos:])
+            if b_error:
+                self.logging.error("Error in Track 1.")
+                self.error = True
+            track_2, b_error = self.__track_2(ped_request[self.ParsePos:])
+            if b_error:
+                self.logging.error("Error in Track 2.")
+                self.error = True
+        else:
+            self.ParsePos = self.ParsePos + 1
         extra_data_card, b_error = self.__extra_data_card(ped_request[self.ParsePos:])
         if b_error:
             self.logging.error("Error in Extra Data Card.")
@@ -294,7 +304,7 @@ class Transaction:
     def __operation_number(self, ped_request):
         (operation_number, position) = self.__get_field(HASH_DELIMETER, ped_request)
         self.logging.info("operation number \t{0}".format(operation_number))
-        if int(operation_number) <= 0:
+        if not operation_number.isdigit():
             self.logging.info("Error in operation number. Bad format.")
             b_error = True
         else:
@@ -546,6 +556,15 @@ class Transaction:
             else:
                 get_field = get_field + i
 
+    def __checkTablePInfo(self, environment):
+        noerror = False
+        if 'TablePinfo' in environment:
+            if environment['TablePinfo'].keys() >= {'swversion', 'ftpuser', 'passftp'}:
+                if environment['TablePinfo']['swversion'] and environment['TablePinfo']['ftpuser'] \
+                        and environment['TablePinfo']['passftp']:
+                    noerror = True
+        return noerror
+
     def __build_data(self):
         if 'MRL' == self.entrymode or 'AML' == self.entrymode:
             data = {'Error': self.error, 'Amount': self.amount, 'EntryMode': self.entrymode,
@@ -558,3 +577,4 @@ class Transaction:
                     'OpCode': self.operation_code, 'lastNSM': self.LastNSM, 'OpNum': self.OpNum,
                     'MerchantID': self.Merchant}
         return data
+

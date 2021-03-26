@@ -6,6 +6,7 @@ import sys
 from datetime import date, datetime
 from TelechargeDB import DataBase
 from Transaction import Transaction
+from Transaction import TablePException
 from TicketDB import TDataBase
 from PyQt5.QtWidgets import QApplication, QMainWindow, QMessageBox, QPushButton, QTableWidgetItem
 from PyQt5 import uic, QtCore
@@ -43,6 +44,13 @@ class MockV2(QThread):
         self.databasetables = DataBase(self.logger_handler)
         self.load_tables()
         self.load_ticket()
+        self.swversion = ''
+        self.ftpuser = ''
+        self.passftp = ''
+        self.horatc = datetime.now().strftime("%H%M")
+        self.fechatc = date.today().strftime("%d%m%y")
+        self.background = '0'
+        self.postprocess = '0'
 
     def __del__(self):
         pass
@@ -79,7 +87,7 @@ class MockV2(QThread):
 
     def run(self):
         # Socket configuration
-        transaction = Transaction(self.logger_handler, self.__getenviroment(), self.databasetables)
+        transaction = Transaction(self.logger_handler, self.databasetables)
         self.socket_handler = SocketHandler()
         if not self.socket_handler.start(False):
             self.logger_handler.error("Socket configuration error")
@@ -111,6 +119,10 @@ class MockV2(QThread):
                         self.logger_handler.exception(e)
                         self.logger_handler.warning(" CADENA ENCRIPTADA!!!\n")
                         self.logger_handler.info("[RX] {0}".format(data))
+                    except TablePException as e:
+                        self.logger_handler.exception(e)
+                        self.logger_handler.warning(" FALTA DE DATOS EN TABLA P!!!\n")
+                        self.logger_handler.info("[RX] {0}".format(data))
                     except Exception as e:
                         self.logger_handler.exception(e)
                         self.logger_handler.warning(" ERROR!!!\n")
@@ -127,16 +139,57 @@ class MockV2(QThread):
         self.environment['TelechargeType'] = self.telechargetype
         self.environment['EcupImage'] = self.EcupImage
         self.environment['EcupStatus'] = self.Ecouponing
+        self.environment['TablePinfo'] = {'swversion': self.swversion, 'ftpuser': self.ftpuser,
+                                          'passftp': self.passftp, 'horatc': self.horatc, 'fechatc': self.fechatc,
+                                          'background': self.background, 'postprocess': self.postprocess}
         return self.environment
 
     def settypetelecharge(self, type):
-        self.telechargetype = type
+        if type == 0 or type == 1:
+            self.telechargetype = type
+        elif type == 2:
+            self.telechargetype = type + 1
+        elif type == 3:
+            self.telechargetype = type + 2
+        else:
+            self.telechargetype = 0
 
     def setecuponingimage(self, type):
         self.EcupImage = 'I00' + str(type + 1)
 
-    def enableecuponing(self):
-        self.Ecouponing = True
+    def enableecuponing(self, value):
+        self.Ecouponing = value
+
+    def modifytablep(self, value):
+        fields = {'versionsw': 1, 'userftp': 2, 'passftp': 3, 'horatc': 4,
+                  'fechatc': 5, 'background': 6, 'postprocess': 7}
+        process = 0
+        for val, key in fields.items():
+            if val == self.sender().objectName():
+                process = key
+                break
+        if process == 1:
+            self.swversion = value
+        elif process == 2:
+            self.ftpuser = value
+        elif process == 3:
+            self.passftp = value
+        elif process == 4:
+            self.horatc = value.toString("HHmm")
+        elif process == 5:
+            self.fechatc = value.toString("ddMMyy")
+        elif process == 6:
+            if value == 2:
+                self.background = '1'
+            else:
+                self.background = '0'
+        elif process == 7:
+            if value == 2:
+                self.postprocess = '1'
+            else:
+                self.postprocess = '0'
+        else:
+            self.logger_handler.error("The sender to callback  is unreachable.")
 
 
 class MainWin(QMainWindow):
@@ -184,14 +237,22 @@ class MainWin(QMainWindow):
         # Table P
         self.horatc.setTime(QtCore.QTime.currentTime())
         self.fechatc.setDate(QtCore.QDate.currentDate())
-
+        self.horatc.timeChanged.connect(self.mock.modifytablep)
+        self.fechatc.dateChanged.connect(self.mock.modifytablep)
+        self.versionsw.textChanged.connect(self.mock.modifytablep)
+        self.userftp.textChanged.connect(self.mock.modifytablep)
+        self.passftp.textChanged.connect(self.mock.modifytablep)
+        self.background.stateChanged.connect(self.mock.modifytablep)
+        self.postprocess.stateChanged.connect(self.mock.modifytablep)
 
         if RUN_AUTO:
             self.abrirsocket()
 
     def Ecupestatus(self, state):
         if state == QtCore.Qt.Checked:
-            self.mock.enableecuponing()
+            self.mock.enableecuponing(True)
+        else:
+            self.mock.enableecuponing(False)
 
     def volcartablas(self):
         print("dadsa")

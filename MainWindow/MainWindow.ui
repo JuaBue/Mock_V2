@@ -53,7 +53,7 @@
      <string/>
     </property>
     <property name="pixmap">
-     <pixmap>icon/led-red-on.png</pixmap>
+     <pixmap>../../../../../.designer/backup/icon/led-red-on.png</pixmap>
     </property>
     <property name="scaledContents">
      <bool>true</bool>
@@ -173,29 +173,6 @@
        </property>
       </widget>
      </widget>
-     <widget class="QLabel" name="label">
-      <property name="geometry">
-       <rect>
-        <x>180</x>
-        <y>30</y>
-        <width>81</width>
-        <height>16</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>Tipo Telecarga</string>
-      </property>
-     </widget>
-     <widget class="QComboBox" name="TelechargeCombo">
-      <property name="geometry">
-       <rect>
-        <x>180</x>
-        <y>50</y>
-        <width>131</width>
-        <height>22</height>
-       </rect>
-      </property>
-     </widget>
     </widget>
     <widget class="QWidget" name="tab_2">
      <attribute name="title">
@@ -292,7 +269,14 @@
           </widget>
          </item>
          <item>
-          <widget class="QLineEdit" name="passftp"/>
+          <widget class="QLineEdit" name="passftp">
+           <property name="cursor">
+            <cursorShape>OpenHandCursor</cursorShape>
+           </property>
+           <property name="echoMode">
+            <enum>QLineEdit::PasswordEchoOnEdit</enum>
+           </property>
+          </widget>
          </item>
         </layout>
        </widget>
@@ -338,14 +322,14 @@
          <widget class="QDateEdit" name="fechatc"/>
         </item>
         <item row="3" column="0" colspan="2">
-         <widget class="QCheckBox" name="checkBox_2">
+         <widget class="QCheckBox" name="background">
           <property name="text">
            <string>Background</string>
           </property>
          </widget>
         </item>
         <item row="3" column="2">
-         <widget class="QCheckBox" name="checkBox_3">
+         <widget class="QCheckBox" name="postprocess">
           <property name="text">
            <string>PostProcess</string>
           </property>
@@ -354,17 +338,27 @@
        </layout>
       </widget>
      </widget>
-     <widget class="QCheckBox" name="checkBox">
+     <widget class="QComboBox" name="TelechargeCombo">
       <property name="geometry">
        <rect>
-        <x>250</x>
+        <x>190</x>
         <y>30</y>
+        <width>131</width>
+        <height>22</height>
+       </rect>
+      </property>
+     </widget>
+     <widget class="QLabel" name="label_9">
+      <property name="geometry">
+       <rect>
+        <x>190</x>
+        <y>10</y>
         <width>81</width>
-        <height>18</height>
+        <height>16</height>
        </rect>
       </property>
       <property name="text">
-       <string>Background</string>
+       <string>Tipo Telecarga</string>
       </property>
      </widget>
     </widget>
@@ -382,7 +376,7 @@
      <string/>
     </property>
     <property name="pixmap">
-     <pixmap>icon/logo_wordline.PNG</pixmap>
+     <pixmap>icon/logo_wordline.png</pixmap>
     </property>
     <property name="scaledContents">
      <bool>true</bool>

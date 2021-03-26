@@ -4,8 +4,8 @@ from random import randint
 from TicketDB import TDataBase
 
 
-RESPONSE = 'PH24{0}PTD{1}{2}1100000LACPTELE#{3}#{4}##P{5}#1#{6}#{7}#01#00015#0#0#{8}#{8}#H24QA#P4wtY24s'
-BASE_SIZE = 79
+RESPONSE = 'PH24{0}PTD{1}{2}1100000LACPTELE#{3}#{4}##P{5}#1#{6}#{7}#01#00015#{8}#{9}#{10}#{10}#{11}#{12}'
+BASE_SIZE = 66
 MAX_LENGTH_HEADER = 30
 DC1_DELIMETER = ''
 DC2_DELIMETER = ''
@@ -14,7 +14,7 @@ HASH_DELIMETER = '#'
 
 
 class Telecharge:
-    def __init__(self, logging_handler, environment):
+    def __init__(self, logging_handler):
         self.logging = logging_handler
         self.ParsePos = 0
         self.error = False
@@ -24,23 +24,35 @@ class Telecharge:
         self.lastNSM = ''
         self.ProtocolVersion = ''
         self.Merchant = ''
-        self.SWversion = '062339'
+        self.swversion = ''
+        self.ftpuser = ''
+        self.passftp = ''
+        self.horatc = ''
+        self.fechatc = ''
+        self.background = '0'
+        self.postprocess = '0'
 
-    def build_response(self, data_response, isAckFrame):
+    def build_response(self, data_response, isAckFrame, environment):
         if not isAckFrame:
             if not self.__import_data(data_response):
                 return
+        if not self.__import_environment(environment):
+            return
         op_data = self.__log_operation()
-        long = len(self.SWversion) * 2
+        long = len(self.swversion) * 2 + len(self.ftpuser) + len(self.passftp)
         return op_data, RESPONSE.format("{0:0=5d}".format(BASE_SIZE + long),
                                self.ProtocolVersion,
                                self.Merchant,
                                date.today().strftime("%d%m%y") + datetime.now().strftime("%H%M"),
                                self.lastNSM,
                                self.Ptable,
-                               date.today().strftime("%d%m%y"),
-                               datetime.now().strftime("%H%M"),
-                               self.SWversion)
+                               self.fechatc,
+                               self.horatc,
+                               self.background,
+                               self.postprocess,
+                               self.swversion,
+                               self.ftpuser,
+                               self.passftp)
 
     def __import_data(self, data_response):
         if 'Error' in data_response:
@@ -50,6 +62,53 @@ class Telecharge:
         if 'ProtocolVersion' in data_response:
             self.ProtocolVersion = data_response['ProtocolVersion']
         return True
+
+    def __import_environment(self, environment):
+        if 'TablePinfo' in environment:
+            if 'swversion' in environment['TablePinfo']:
+                if environment['TablePinfo']['swversion']:
+                    self.swversion = environment['TablePinfo']['swversion']
+                else:
+                    self.error = True
+                    return False
+            if 'ftpuser' in environment['TablePinfo']:
+                if environment['TablePinfo']['ftpuser']:
+                    self.ftpuser = environment['TablePinfo']['ftpuser']
+                else:
+                    self.error = True
+                    return False
+            if 'passftp' in environment['TablePinfo']:
+                if environment['TablePinfo']['passftp']:
+                    self.passftp = environment['TablePinfo']['passftp']
+                else:
+                    self.error = True
+                    return False
+            if 'horatc' in environment['TablePinfo']:
+                if environment['TablePinfo']['horatc']:
+                    self.horatc = environment['TablePinfo']['horatc']
+                else:
+                    self.error = True
+                    return False
+            if 'fechatc' in environment['TablePinfo']:
+                if environment['TablePinfo']['fechatc']:
+                    self.fechatc = environment['TablePinfo']['fechatc']
+                else:
+                    self.error = True
+                    return False
+            if 'background' in environment['TablePinfo']:
+                if environment['TablePinfo']['background']:
+                    self.background = environment['TablePinfo']['background']
+                else:
+                    self.error = True
+                    return False
+            if 'postprocess' in environment['TablePinfo']:
+                if environment['TablePinfo']['postprocess']:
+                    self.postprocess = environment['TablePinfo']['postprocess']
+                else:
+                    self.error = True
+                    return False
+        return True
+
 
     def process(self, ped_request):
         # Type of Request.

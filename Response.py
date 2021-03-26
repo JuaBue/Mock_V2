@@ -10,11 +10,12 @@ BASE_SIZE = 77
 
 
 class Response:
-    def __init__(self, logging_handler, environment, databasetables):
+    def __init__(self, logging_handler, databasetables):
         self.logging = logging_handler
         self.ticket = TDataBase(logging_handler, False)
         self.databasetables = databasetables
         self.TrameError = False
+        self.TicketError = False
         self.Amount = 0
         self.EntryMode = ''
         self.OpCode = ''
@@ -35,22 +36,19 @@ class Response:
         self.topupanulop = 0
         self.topuprt = '2828000000000' + ''.join(["{}".format(randint(0, 9)) for num in range(7)])
         self.authonum = ''.join(["{}".format(randint(0, 9)) for num in range(0, 6)])
-        self.upload = self.__getuploadtask()
+        self.upload = '0'
         #environment variables
         self.telechargetype = '0'
-        self.environment = environment
         self.movementdata = ''
 
-
-    def build_response(self, data_response):
+    def build_response(self, data_response, environment):
         if not self.__import_data(data_response):
+            return
+        if not self.__import_environment(environment):
             return
         self.ticketstring, long = self.__buildticket()
         self.__getresponsecode()
         op_data = self.__log_operation()
-        if 'EcupStatus' in self.environment.keys() and self.environment['EcupStatus'] and \
-                'EcupImage' in self.environment.keys() and self.environment['EcupImage']:
-            self.ecouponing = '{0}####------------------------'.format(self.environment['EcupImage'])
         long = long + len(self.chipdata) + len(self.ecouponing) + len(self.movementdata)
         response = RESPONSE.format("{0:0=5d}".format(BASE_SIZE + long),
                                self.ProtocolVersion,
@@ -96,6 +94,17 @@ class Response:
             self.topupamount = float(data_response['TopUpOpsAmount']) / 100
         if 'TopUpOpsAnulaOP' in data_response:
             self.topupanulop = int(data_response['TopUpOpsAnulaOP'])
+        return True
+
+    def __import_environment(self, environment):
+        if 'EcupStatus' in environment:
+            if 'EcupImage' in environment and environment['EcupStatus']:
+                self.ecouponing = '{0}####------------------------'.format(environment['EcupImage'])
+            else:
+                self.ecouponing = ''
+        if 'TelechargeType' in environment:
+            self.upload = environment['TelechargeType']
+
         return True
 
     def __reset_data(self):
@@ -176,6 +185,7 @@ class Response:
             ticket_template = self.ticket.obtain_template(template + currentcopy)
             if not ticket_template:
                 ticket_template = self.ticket.obtain_template('DR**M')
+                self.TicketError = True
             for block in ticket_template['Bloques'].split('/'):
                 current_block = self.ticket.obtain_bloque(block)
                 if isinstance(current_block, dict):
@@ -272,14 +282,14 @@ class Response:
             return '*'
 
     def __getresponsecode(self):
-        if not self.TrameError:
+        if not self.TrameError and not self.TicketError:
             self.Result = 'ACP'
         else:
             self.Result = 'ERR'
 
     def __getuploadtask(self):
         # check external value to set this value.
-        return '1'
+        return '0'
 
     def __log_operation(self):
         data = {'Date': date.today().strftime("%d/%m/%Y"), 'Time': datetime.now().strftime("%H:%M:%S"),
@@ -291,3 +301,4 @@ class Response:
     def __gettopupinfo(self, topupid):
         topupinfo = self.databasetables.obtain_table_p(topupid)
         return {'Cabecera': topupinfo['Mensaje Cabec.'], 'Pie': topupinfo['Mensaje Pie']}
+
