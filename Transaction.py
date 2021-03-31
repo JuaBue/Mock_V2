@@ -16,6 +16,7 @@ nackTemplate = "^PH24[0-9]{5}PTD0300[0-9]{14}MNOK[]$"
 class TablePException(Exception):
     pass
 
+
 class Transaction:
 
     def __init__(self, logging_handler, databasetables):
@@ -38,6 +39,7 @@ class Transaction:
         self.giftprodcode = ''
         self.topupanulope = 0
         self.topupamount = '000000000'
+        self.track_2 = ''
         pass
 
     def process(self, ped_request, environment):
@@ -163,7 +165,7 @@ class Transaction:
             if b_error:
                 self.logging.error("Error in Track 1.")
                 self.error = True
-            track_2, b_error = self.__track_2(ped_request[self.ParsePos:])
+            self.track_2, b_error = self.__track_2(ped_request[self.ParsePos:])
             if b_error:
                 self.logging.error("Error in Track 2.")
                 self.error = True
@@ -219,7 +221,7 @@ class Transaction:
             self.logging.error("Error in Discount product.")
             self.error = True
         extra_data, b_error = self.__extradata(ped_request[self.ParsePos:])
-        #type of entry
+        # type of entry
         if '1' == type_card:
             self.entrymode = 'SWP'
         elif '2' == type_card:
@@ -569,12 +571,12 @@ class Transaction:
         if 'MRL' == self.entrymode or 'AML' == self.entrymode:
             data = {'Error': self.error, 'Amount': self.amount, 'EntryMode': self.entrymode,
                     'OpCode': self.operation_code, 'lastNSM': self.LastNSM, 'OpNum': self.OpNum,
-                    'MerchantID': self.Merchant, 'TopUp': self.giftprodcode, 'Telephone': self.telephone,
-                    'TopUpOps': self.topupoperation, 'TopUpOpsAmount': self.topupamount,
-                    'TopUpOpsAnulaOP': self.topupanulope}
+                    'MerchantID': self.Merchant, 'track2': self.track_2, 'TopUp': self.giftprodcode,
+                    'Telephone': self.telephone, 'TopUpOps': self.topupoperation,
+                    'TopUpOpsAmount': self.topupamount, 'TopUpOpsAnulaOP': self.topupanulope}
         else:
             data = {'Error': self.error, 'Amount': self.amount, 'EntryMode': self.entrymode,
                     'OpCode': self.operation_code, 'lastNSM': self.LastNSM, 'OpNum': self.OpNum,
-                    'MerchantID': self.Merchant}
+                    'MerchantID': self.Merchant, 'track2': self.track_2}
         return data
 

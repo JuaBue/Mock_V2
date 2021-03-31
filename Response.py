@@ -5,8 +5,8 @@ import string
 import random
 
 
-RESPONSE = 'PH24{0}PDI{1}{2}3960000L{3}#20602#{4}#{5}#{6}#{7}##{8}##0000##{9}{10}{11}######{12}##'
-BASE_SIZE = 77
+RESPONSE = 'PH24{0}PDI{1}{2}3960000L{3}#20602#{4}#{5}#{6}#{7}##{8}##0000##{9}{10}{11}{12}'
+BASE_SIZE = 69
 
 
 class Response:
@@ -15,7 +15,6 @@ class Response:
         self.ticket = TDataBase(logging_handler, False)
         self.databasetables = databasetables
         self.TrameError = False
-        self.TicketError = False
         self.Amount = 0
         self.EntryMode = ''
         self.OpCode = ''
@@ -29,6 +28,7 @@ class Response:
         self.ecouponing = ''
         self.Merchant = ''
         self.TopUp = ''
+        self.track2 = ''
         self.cabeceratopup = 'FALTA CONFIG'
         self.pietopup = 'FALTA CONFIG'
         self.telephone = 'XXXXXXXXX'
@@ -37,8 +37,8 @@ class Response:
         self.topuprt = '2828000000000' + ''.join(["{}".format(randint(0, 9)) for num in range(7)])
         self.authonum = ''.join(["{}".format(randint(0, 9)) for num in range(0, 6)])
         self.upload = '0'
-        #environment variables
-        self.telechargetype = '0'
+        self.opemode = 'N'
+        self.movementinfo = ''
         self.movementdata = ''
 
     def build_response(self, data_response, environment):
@@ -46,8 +46,8 @@ class Response:
             return
         if not self.__import_environment(environment):
             return
-        self.ticketstring, long = self.__buildticket()
         self.__getresponsecode()
+        self.ticketstring, long = self.__buildticket()
         op_data = self.__log_operation()
         long = long + len(self.chipdata) + len(self.ecouponing) + len(self.movementdata)
         response = RESPONSE.format("{0:0=5d}".format(BASE_SIZE + long),
@@ -84,6 +84,8 @@ class Response:
             self.ProtocolVersion = data_response['ProtocolVersion']
         if 'MerchantID' in data_response:
             self.Merchant = data_response['MerchantID']
+        if 'track2' in data_response:
+            self.track2 = data_response['track2']
         if 'TopUp' in data_response:
             self.TopUp = data_response['TopUp']
         if 'Telephone' in data_response:
@@ -104,7 +106,10 @@ class Response:
                 self.ecouponing = ''
         if 'TelechargeType' in environment:
             self.upload = environment['TelechargeType']
-
+        if 'OperationMode' in environment:
+            self.opemode = environment['OperationMode']
+        if 'MovementeInfo' in environment:
+            self.movementinfo = environment['MovementeInfo']
         return True
 
     def __reset_data(self):
@@ -123,12 +128,14 @@ class Response:
         self.topuprt = '2828000000000' + ''.join(["{}".format(randint(0, 9)) for num in range(7)])
         self.authonum = ''.join(["{}".format(randint(0, 9)) for num in range(0, 6)])
         self.topupanulop = 0
+        self.opemode = 'N'
+        self.track2 = ''
 
     def __buildticket(self):
         template = ''
         ticket_raw = ''
         # Operation result
-        if not self.TrameError:
+        if self.Result == 'ACP':
             template += 'A'
         else:
             template += 'D'
@@ -137,6 +144,7 @@ class Response:
         if 'V ' == self.OpCode and not self.TrameError:
             template += 'S'
             self.OpString = 'VENTA'
+            self.movementdata = self.__getmovementdata()
         elif 'AV' == self.OpCode and not self.TrameError:
             template += 'C'
             self.OpString = 'DEVOLUCION'
@@ -152,14 +160,14 @@ class Response:
             topupinfo = self.__gettopupinfo(self.TopUp)
             self.cabeceratopup = topupinfo['Cabecera']
             self.pietopup = topupinfo['Pie']
-            self.movementdata = str(int(self.topupamount) * 100)
+            self.movementdata = '######' + str(int(self.topupamount) * 100) + '##'
         elif 'AML' == self.OpCode and not self.TrameError:
             template += 'Q'
             self.OpString = 'RECARGA'
             topupinfo = self.__gettopupinfo(self.TopUp)
             self.cabeceratopup = topupinfo['Cabecera']
             self.pietopup = topupinfo['Pie']
-            self.movementdata = str(int(self.topupamount) * 100)
+            self.movementdata = '######' + str(int(self.topupamount) * 100) + '##'
         elif self.TrameError:
             template += 'E'
         elif self.TrameError:
@@ -186,7 +194,6 @@ class Response:
             if not ticket_template:
                 self.Result = 'ERR'
                 ticket_template = self.ticket.obtain_template('DR**M')
-                self.TicketError = True
             for block in ticket_template['Bloques'].split('/'):
                 current_block = self.ticket.obtain_bloque(block)
                 if isinstance(current_block, dict):
@@ -283,14 +290,23 @@ class Response:
             return '*'
 
     def __getresponsecode(self):
-        if not self.TrameError and not self.TicketError:
+        if self.opemode == 'N':
+            if not self.TrameError:
+                self.Result = 'ACP'
+            else:
+                self.Result = 'ERR'
+        elif self.opemode == 'A':
             self.Result = 'ACP'
-        else:
+        elif self.opemode == 'E':
             self.Result = 'ERR'
 
-    def __getuploadtask(self):
-        # check external value to set this value.
-        return '0'
+    def __getmovementdata(self):
+        print(self.track2)
+        if self.movementinfo and 'movementdata' in self.movementinfo and self.movementinfo['movementdata']:
+            movementdata = '111115******6145#Q1#A#Q1##OPERACIONES CEPSA       #1215##02520#100#1000##505#3715#1317##'
+        else:
+            movementdata = ''
+        return movementdata
 
     def __log_operation(self):
         data = {'Date': date.today().strftime("%d/%m/%Y"), 'Time': datetime.now().strftime("%H:%M:%S"),
