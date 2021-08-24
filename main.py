@@ -12,7 +12,6 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QMessageBox, QPushButton,
 from PyQt5 import uic, QtCore
 from PyQt5.QtCore import QThread, pyqtSignal
 from PyQt5.QtGui import QPixmap, QIcon
-import time
 
 RUN_AUTO = True
 
@@ -25,7 +24,7 @@ ICON_GREEN_LED = "MainWindow/icon/green-led-on.png"
 listaTelecarga = ['0 - None', '1 - Data', '3 - SW', '5 - Image']
 listaImg = ['I001', 'I002', 'I003', 'I004', 'I005', 'I006', 'I007', 'I008', 'I009']
 listaGroup = ['t ', 't1', 't2', 'Q ', 'Q1', 'Q2', 'Q3', 'Q4', 'P', 'h', 'z', 'l1', 'l2', 'l']
-listaCierre = ['0', '1', '2', 'A']
+listaCierre = ['0', '1', '2', 'A', '']
 
 
 class MockV2(QThread):
@@ -45,8 +44,10 @@ class MockV2(QThread):
         self.process = True
         self.environment = {}
         self.telechargetype = 0
-        self.EcupImage = 0
+        self.EcupImage = 'I001'
         self.Ecouponing = False
+        self.Qrtext = ''
+        self.Qrstatus = False
         self.databaseticket = TDataBase(self.logger_handler)
         self.databasetables = DataBase(self.logger_handler)
         self.load_tables()
@@ -59,7 +60,10 @@ class MockV2(QThread):
         self.background = '0'
         self.postprocess = '0'
         self.opemode = 'N'
+        self.tablep = False
         self.movementdata = False
+        self.moveproductinfo = ''
+        self.movenumprod = '00'
 
     def __del__(self):
         pass
@@ -74,7 +78,6 @@ class MockV2(QThread):
             os.makedirs(folder_name)
         file_name = '.\\LOGS\\{0}{1}.LOG'.format(date.today().strftime("%Y%m%d"), datetime.now().strftime("%H%M"))
         log_formatter = '%(asctime)s\t%(funcName)s\t%(lineno)d\t[%(levelname)s]\t%(message)s'
-
         # Create the logger
         self.logger_handler = logging.getLogger('Mock V2 Logger')
         self.logger_handler.setLevel(LOGGING_LEVEL_FILE)
@@ -117,7 +120,6 @@ class MockV2(QThread):
                     try:
                         rcv_request = data.decode('ascii')
                         self.logger_handler.info("[RX] {0}".format(rcv_request))
-                        time.sleep(2.5)
                         op_data, responsestring = transaction.process(rcv_request, self.__getenviroment())
                         respondedata = responsestring.encode('ascii')
                         print("[TX] {0}".format(responsestring))
@@ -149,6 +151,8 @@ class MockV2(QThread):
         self.environment['TelechargeType'] = self.telechargetype
         self.environment['EcupImage'] = self.EcupImage
         self.environment['EcupStatus'] = self.Ecouponing
+        self.environment['Qr'] = self.Qrtext
+        self.environment['QRStatus'] = self.Qrstatus
         self.environment['OperationMode'] = self.opemode
         self.environment['TablePinfo'] = {'swversion': self.swversion, 'ftpuser': self.ftpuser,
                                           'passftp': self.passftp, 'horatc': self.horatc, 'fechatc': self.fechatc,
@@ -174,6 +178,12 @@ class MockV2(QThread):
 
     def enableecuponing(self, value):
         self.Ecouponing = value
+
+    def setqrtext(self, value):
+        self.Qrtext = value
+
+    def enableqr(self, value):
+        self.Qrstatus = value
 
     def modifytablep(self, value):
         fields = {'versionsw': 1, 'userftp': 2, 'passftp': 3, 'horatc': 4,
@@ -206,6 +216,9 @@ class MockV2(QThread):
         else:
             self.logger_handler.error("The sender to callback  is unreachable.")
 
+    def enabletablep(self, value):
+        self.tablep = value
+
     def operationmode(self, value):
         fields = {'radioN': 1, 'radioE': 2, 'radioA': 3}
         process = 0
@@ -233,15 +246,15 @@ class MockV2(QThread):
         if process == 1 and value:
             self.movegroup = listaGroup[value]
         elif process == 2 and value:
-            self.movecierre = listaGroup[value]
+            self.movecierre = listaCierre[value]
         elif process == 3:
             self.movedescrip = value
         elif process == 4 and value:
-            self.movedescount = value
+            self.movedescount = value.replace(',', '')
         elif process == 5 and value:
             self.moveproductinfo = value
         elif process == 6 and value:
-            self.movenumprod = value
+            self.movenumprod = "{:02d}".format(value)
         else:
             pass
 
@@ -258,9 +271,9 @@ class MainWin(QMainWindow):
         self.setWindowIcon(QIcon('MainWindow\\icon\\icon_wordline.png'))
         # Fijar el tamaño de la ventanda
         # Fijar el tamaño minimo de la ventana.
-        self.setMinimumSize(500, 305)
+        self.setMinimumSize(600, 400)
         # Fijar el tamaño maximo de la ventana.
-        self.setMaximumSize(500, 305)
+        self.setMaximumSize(600, 400)
         self.mock = MockV2()
         # Operations window
         self.op_win = OperationsWin()
@@ -278,6 +291,8 @@ class MainWin(QMainWindow):
             self.EcoupImg.addItem(value)
         self.EcoupImg.currentIndexChanged.connect(self.mock.setecuponingimage)
         self.checkEcup.stateChanged.connect(self.Ecupestatus)
+        self.checkQR.stateChanged.connect(self.Qrstatus)
+        self.textQR.textChanged.connect(self.mock.setqrtext)
         # Operation
         self.radioN.toggled.connect(self.mock.operationmode)
         self.radioE.toggled.connect(self.mock.operationmode)
@@ -295,16 +310,17 @@ class MainWin(QMainWindow):
         self.lineEdit.textChanged.connect(self.mock.mofifymovementdata)
         self.discount.textChanged.connect(self.mock.mofifymovementdata)
         self.cesta.textChanged.connect(self.mock.mofifymovementdata)
-        self.movement.stateChanged.connect(self.mock.mofifymovementdata)
+        self.movement.stateChanged.connect(self.mock.enablemovementdata)
         self.products.valueChanged.connect(self.mock.mofifymovementdata)
-        self.lineEdit.setText('OPERACIONES CEPSA       ')
-        self.discount.setText('12,15')
-        self.cesta.setText('520#100#1000##505#3715#1317##')
-        self.products.setValue(2)
+        self.lineEdit.setText('OPERACIONES MOCK        ')
+        self.discount.setText('1,00')
+        self.cesta.setText('')
+        self.products.setValue(0)
         # QR
         # Connect signal to update the table
         self.mock.op_signal.connect(self.op_win.update_table)
         # Table P
+        self.activarp.stateChanged.connect(self.mock.enabletablep)
         self.horatc.setTime(QtCore.QTime.currentTime())
         self.fechatc.setDate(QtCore.QDate.currentDate())
         self.horatc.timeChanged.connect(self.mock.modifytablep)
@@ -314,13 +330,12 @@ class MainWin(QMainWindow):
         self.passftp.textChanged.connect(self.mock.modifytablep)
         self.background.stateChanged.connect(self.mock.modifytablep)
         self.postprocess.stateChanged.connect(self.mock.modifytablep)
-
+        # Log Text viewer
+        self.logtext.setReadOnly(True)
+        self.logtext.appendPlainText("TODO: Implementar señal para logear info.")
 
         if RUN_AUTO:
             self.abrirsocket()
-
-    def juan(self):
-        print("pulsa")
 
     def Ecupestatus(self, state):
         if state == QtCore.Qt.Checked:
@@ -328,8 +343,14 @@ class MainWin(QMainWindow):
         else:
             self.mock.enableecuponing(False)
 
+    def Qrstatus(self, state):
+        if state == QtCore.Qt.Checked:
+            self.mock.enableqr(True)
+        else:
+            self.mock.enableqr(False)
+
     def volcartablas(self):
-        print("dadsa")
+        self.logtext.appendPlainText("Volcado de tablas...")
         pass
 
     def abrirsocket(self):

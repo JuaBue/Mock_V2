@@ -5,7 +5,7 @@ import string
 import random
 
 
-RESPONSE = 'PH24{0}PDI{1}{2}3960000L{3}#20602#{4}#{5}#{6}#{7}##{8}##0000##{9}{10}{11}{12}'
+RESPONSE = 'PH24{0}PDI{1}{2}3960000L{3}#20602#{4}#{5}#{6}#{7}##{8}##0000##{9}{10}{11}{12}{13}'
 BASE_SIZE = 69
 
 
@@ -24,6 +24,7 @@ class Response:
         self.chipdata = ''
         self.OpString = ''
         self.ticketstring = ''
+        self.qrcode = ''
         self.Result = ''
         self.ecouponing = ''
         self.Merchant = ''
@@ -40,6 +41,7 @@ class Response:
         self.opemode = 'N'
         self.movementinfo = ''
         self.movementdata = ''
+        self.discount = {}
 
     def build_response(self, data_response, environment):
         if not self.__import_data(data_response):
@@ -49,7 +51,7 @@ class Response:
         self.__getresponsecode()
         self.ticketstring, long = self.__buildticket()
         op_data = self.__log_operation()
-        long = long + len(self.chipdata) + len(self.ecouponing) + len(self.movementdata)
+        long = long + len(self.chipdata) + len(self.ecouponing) + len(self.movementdata) + len(self.qrcode)
         response = RESPONSE.format("{0:0=5d}".format(BASE_SIZE + long),
                                self.ProtocolVersion,
                                self.Merchant,
@@ -61,6 +63,7 @@ class Response:
                                self.upload,
                                self.chipdata,
                                self.ticketstring,
+                               self.qrcode,
                                self.ecouponing,
                                self.movementdata)
         self.logging.info("[TX] {0}".format(response))
@@ -96,9 +99,16 @@ class Response:
             self.topupamount = float(data_response['TopUpOpsAmount']) / 100
         if 'TopUpOpsAnulaOP' in data_response:
             self.topupanulop = int(data_response['TopUpOpsAnulaOP'])
+        if 'Discount' in data_response:
+            self.discount = data_response['Discount']
         return True
 
     def __import_environment(self, environment):
+        if 'QRStatus' in environment:
+            if 'Qr' in environment and environment['QRStatus']:
+                self.qrcode = 'SBQRSO{0}'.format(environment['Qr'])
+            else:
+                self.qrcode = ''
         if 'EcupStatus' in environment:
             if 'EcupImage' in environment and environment['EcupStatus']:
                 self.ecouponing = '{0}####------------------------'.format(environment['EcupImage'])
@@ -130,6 +140,7 @@ class Response:
         self.topupanulop = 0
         self.opemode = 'N'
         self.track2 = ''
+        self.discount = {}
 
     def __buildticket(self):
         template = ''
@@ -144,6 +155,15 @@ class Response:
         if 'V ' == self.OpCode and not self.TrameError:
             template += 'S'
             self.OpString = 'VENTA'
+            self.movementdata = self.__getmovementdata()
+        elif 'BF' == self.OpCode and not self.TrameError:
+            template += 'S' # TODO: esto hay que cambiarlo
+            self.OpString = 'RESCATE'
+            self.__LYTdataCepsa()
+            self.movementdata = self.__getmovementdata()
+        elif 'B ' == self.OpCode and not self.TrameError:
+            template += 'S' # TODO: esto hay que cambiarlo
+            self.OpString = 'ACUMULACION'
             self.movementdata = self.__getmovementdata()
         elif 'AV' == self.OpCode and not self.TrameError:
             template += 'C'
@@ -301,12 +321,26 @@ class Response:
             self.Result = 'ERR'
 
     def __getmovementdata(self):
-        print(self.track2)
         if self.movementinfo and 'movementdata' in self.movementinfo and self.movementinfo['movementdata']:
-            movementdata = '111115******6145#Q1#A#Q1##OPERACIONES CEPSA       #1215##02520#100#1000##505#3715#1317##'
+            movementdata = self.__getpan(self.track2) + '#' + \
+                           self.movementinfo['movegroup'] + '#' + \
+                           self.movementinfo['movecierre'] + '#' + \
+                           self.movementinfo['movegroup'] + '#' + '#' + \
+                           self.movementinfo['movedescrip'] + '#' + \
+                           self.movementinfo['movedescount'] + '#' + '#' + \
+                           self.movementinfo['movenumprod'] + '' + \
+                           self.movementinfo['moveproductinfo']
         else:
             movementdata = ''
         return movementdata
+
+    def __LYTdataCepsa(self):
+        if 'Amount' in self.discount:
+            amount = self.discount['Amount']
+        else:
+            amount = '0000000000'
+        return 'LYT#' + random.randint(1, 99) + '#' + date.today().strftime("%Y%m%d") + \
+               '#001428#201259501259503084210505070519006085#CEPSA#9997003084#999700#' + '#0000000000'
 
     def __log_operation(self):
         data = {'Date': date.today().strftime("%d/%m/%Y"), 'Time': datetime.now().strftime("%H:%M:%S"),
@@ -319,3 +353,8 @@ class Response:
         topupinfo = self.databasetables.obtain_table_p(topupid)
         return {'Cabecera': topupinfo['Mensaje Cabec.'], 'Pie': topupinfo['Mensaje Pie']}
 
+    def __hashpan(self, pan):
+        return pan.split('=')[0][:6] + '******' + pan.split('=')[0][-4:]
+
+    def __getpan(self, trak2):
+        return trak2.split('=')[0]

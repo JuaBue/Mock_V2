@@ -40,6 +40,7 @@ class Transaction:
         self.topupanulope = 0
         self.topupamount = '000000000'
         self.track_2 = ''
+        self.discount = {}
         pass
 
     def process(self, ped_request, environment):
@@ -216,6 +217,7 @@ class Transaction:
             if b_error:
                 self.logging.error("Error in Amount.")
                 self.error = True
+            self.discount = {'Code': self.giftprodcode, 'UnitPrice': unit_price, 'Quantity': quantity, 'Amount': amount}
         discount_product, b_error = self.__discount_product(ped_request[self.ParsePos:])
         if b_error:
             self.logging.error("Error in Discount product.")
@@ -417,6 +419,7 @@ class Transaction:
         operation_code_key = {'V ': 'Venta', 'A ': "Anulacion Generica", 'CP': 'Consulta Puntos',
                               'AV': 'Anulacion Venta',
                               'BF': 'Bonus sale', 'AF': 'Bonus redemption', 'RF': 'Bonus balance sale',
+                              'BA': 'FG points accumulation', 'B ': 'Bonus Credit',
                               'CF': 'Bonus query - CEPSA', 'PAP': 'Unattended Preauthorization',
                               'PAC': 'Preauthorization confirmation', 'PAN': 'Preauthorization cancellation',
                               'AT': 'Partial Refund operation', 'APP': 'Explicit transaction reversal',
@@ -526,8 +529,9 @@ class Transaction:
         (extra_data, position) = self.__get_field(DC2_DELIMETER, ped_request)
         self.logging.info("Extra data \t{0}".format(extra_data))
         if not extra_data:
-            self.logging.info("Error in Extra data. Bad format.")
-            b_error = True
+            self.logging.info("No Extra data.")
+            self.ParsePos = self.ParsePos + position
+            b_error = False
         else:
             self.ParsePos = self.ParsePos + position
             b_error = False
@@ -577,6 +581,6 @@ class Transaction:
         else:
             data = {'Error': self.error, 'Amount': self.amount, 'EntryMode': self.entrymode,
                     'OpCode': self.operation_code, 'lastNSM': self.LastNSM, 'OpNum': self.OpNum,
-                    'MerchantID': self.Merchant, 'track2': self.track_2}
+                    'MerchantID': self.Merchant, 'track2': self.track_2, 'Discount': self.discount}
         return data
 
